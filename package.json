@@ -1,0 +1,74 @@
+{
+  "name": "crisp-weather",
+  "author": "nick1udwig",
+  "version": "0.1.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {
+    "@rebble/clay": "^1.0.10"
+  },
+  "pebble": {
+    "displayName": "Crisp Weather",
+    "uuid": "1c4f5756-46a9-4df0-a820-48f3713007d3",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery",
+      "flint",
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "capabilities": [
+      "configurable",
+      "location"
+    ],
+    "messageKeys": [
+      "DATE",
+      "DAY",
+      "BT",
+      "BATTERY",
+      "SECOND_HAND",
+      "HR_INDICATOR",
+      "HOUR_MARKERS_COLOR",
+      "MINUTE_MARKERS_COLOR",
+      "CHARGING_MARKERS_COLOR",
+      "HANDS_COLOR",
+      "TIPS_COLOR",
+      "SECOND_HAND_COLOR",
+      "SECOND_TIP_COLOR",
+      "CALENDAR_DAY_COLOR",
+      "CORNER_TL",
+      "CORNER_TR",
+      "CORNER_BL",
+      "CORNER_BR",
+      "TEMP_UNIT",
+      "THEME",
+      "WEATHER_TEMP_MIN",
+      "WEATHER_TEMP_MAX",
+      "WEATHER_PRECIP",
+      "FORECAST_START",
+      "FORECAST_DATA"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "png",
+          "name": "MENU_IMAGE",
+          "file": "images/MenuImage_BW.png",
+          "menuIcon": true
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
