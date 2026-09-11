@@ -57,7 +57,8 @@
       "FORECAST_START",
       "FORECAST_DATA",
       "CURRENT_TEMP_COLOR",
-      "FUTURE_TEMP_COLOR"
+      "FUTURE_TEMP_COLOR",
+      "BT_VIBRATE"
     ],
     "resources": {
       "media": [

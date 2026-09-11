@@ -706,8 +706,8 @@ static void draw_proc(Layer *layer, GContext *ctx) {
 }
 
 static void bt_handler(bool connected) {
-  // Buzz on a dropped link, but only when the disconnection indicator is on.
-  if(!connected && s_connected && config_get(PERSIST_KEY_BT)) {
+  // Buzz on a dropped link when enabled, independently of the indicator.
+  if(!connected && s_connected && config_get_bt_vibrate()) {
     vibes_long_pulse();
   }
 
@@ -966,8 +966,7 @@ void main_window_push() {
   subscribe_ticks();
 
   // Always track the connection: it feeds both the dropped-link indicator and
-  // the optional Bluetooth corner. The handler buzzes only when the indicator
-  // is enabled.
+  // the optional Bluetooth corner. Vibration has its own setting.
   connection_service_subscribe((ConnectionHandlers) {
     .pebble_app_connection_handler = bt_handler
   });

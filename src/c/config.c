@@ -1,5 +1,6 @@
 #include "config.h"
 
+static bool s_bt_vibrate;
 static bool s_arr[NUM_SETTINGS];
 static uint32_t s_colors[NUM_COLORS];
 static int s_corners[NUM_CORNERS];
@@ -54,6 +55,11 @@ void config_init() {
     persist_write_bool(PERSIST_KEY_HR_INDICATOR, true);
   }
 
+  if(!persist_exists(PERSIST_KEY_BT_VIBRATE)) {
+    persist_write_bool(PERSIST_KEY_BT_VIBRATE, true);
+  }
+  s_bt_vibrate = persist_read_bool(PERSIST_KEY_BT_VIBRATE);
+
   // Seed new colors for existing installs without replacing user choices.
   if(!persist_exists(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_CURRENT_TEMP_COLOR)) {
     persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_CURRENT_TEMP_COLOR,
@@ -82,6 +88,10 @@ void config_init() {
   s_weather_temp_min = persist_read_int(PERSIST_KEY_WEATHER_TEMP_MIN);
   s_weather_temp_max = persist_read_int(PERSIST_KEY_WEATHER_TEMP_MAX);
   s_weather_precip   = persist_read_int(PERSIST_KEY_WEATHER_PRECIP);
+}
+
+bool config_get_bt_vibrate(void) {
+  return s_bt_vibrate;
 }
 
 bool config_get(int key) {

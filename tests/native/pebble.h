@@ -14,3 +14,9 @@ typedef struct { Tuple start, data; } DictionaryIterator;
 Tuple *dict_find(DictionaryIterator *, int);
 int persist_read_data(int, void *, size_t);
 int persist_write_data(int, const void *, size_t);
+
+bool persist_exists(int);
+bool persist_read_bool(int);
+int32_t persist_read_int(int);
+int persist_write_bool(int, bool);
+int persist_write_int(int, int32_t);

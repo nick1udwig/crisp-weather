@@ -110,6 +110,7 @@
 // (Clay) remembers a separate accent palette per theme and resends the matching
 // one on switch, so the watch only ever holds the active palette.
 #define PERSIST_KEY_THEME      7
+#define PERSIST_KEY_BT_VIBRATE 8
 #define THEME_DARK             0
 #define THEME_LIGHT            1
 

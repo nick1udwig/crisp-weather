@@ -84,6 +84,12 @@ module.exports = [
         "messageKey": "BT",
         "label": "Show disconnection indicator",
         "defaultValue": true
+      },
+      {
+        "type": "toggle",
+        "messageKey": "BT_VIBRATE",
+        "label": "Vibrate on Bluetooth disconnect",
+        "defaultValue": true
       }
     ]
   },

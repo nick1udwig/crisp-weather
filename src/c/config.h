@@ -5,6 +5,7 @@
 void config_init();
 
 bool config_get(int key);
+bool config_get_bt_vibrate(void);
 uint32_t config_get_color(int key);
 
 // Content kind selected for a corner (CORNER_POS_* index).

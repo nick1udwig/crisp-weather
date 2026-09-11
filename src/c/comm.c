@@ -67,6 +67,8 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
   config_changed |= store_bool(iter, MESSAGE_KEY_SECOND_HAND, PERSIST_KEY_SECOND_HAND);
   config_changed |= store_bool(iter, MESSAGE_KEY_HR_INDICATOR, PERSIST_KEY_HR_INDICATOR);
 
+  config_changed |= store_bool(iter, MESSAGE_KEY_BT_VIBRATE, PERSIST_KEY_BT_VIBRATE);
+
   // Colors.
   config_changed |= store_color(iter, MESSAGE_KEY_HOUR_MARKERS_COLOR,     PERSIST_KEY_HOUR_MARKERS_COLOR);
   config_changed |= store_color(iter, MESSAGE_KEY_MINUTE_MARKERS_COLOR,   PERSIST_KEY_MINUTE_MARKERS_COLOR);
