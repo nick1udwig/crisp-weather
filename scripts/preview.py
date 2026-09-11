@@ -26,6 +26,10 @@ icons = [0,0,0,0,2,2,4,4,2,2,1,1]*2
 raw = bytes(v for t,k in zip(temps,icons) for v in (t+100,k)).hex()
 run('send-app-message', '--int', f'{keys["FORECAST_START"]}={start}',
     f'{keys["THEME"]}={int(theme == "light")}',
+    f'{keys["HOUR_MARKERS_COLOR"]}={0x000000 if theme == "light" else 0xffffff}',
+    f'{keys["MINUTE_MARKERS_COLOR"]}={0x555555 if theme == "light" else 0xaaaaaa}',
+    f'{keys["CURRENT_TEMP_COLOR"]}={0x000000 if theme == "light" else 0xffffff}',
+    f'{keys["FUTURE_TEMP_COLOR"]}={0xffaa00}',
     f'{keys["TIPS_COLOR"]}={0x000000 if theme == "light" else 0xffffff}',
     f'{keys["HANDS_COLOR"]}={0x555555 if theme == "light" else 0xaaaaaa}',
     f'{keys["CALENDAR_DAY_COLOR"]}={0xaa5500 if theme == "light" else 0xffff55}',

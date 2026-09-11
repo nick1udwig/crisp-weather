@@ -6,12 +6,12 @@ A Pebble watchface based on [Michal Bláha’s Crisp](https://github.com/michalb
 - Four short minute ticks appear in the active five-minute section (for example, minutes 6–9 at 10:08), advancing with the minute hand.
 - The current hour always shows its temperature in the dial, even when its weather changes. On color watches, current-hour temperatures default to black on light themes and white on dark themes; future temperatures default to amber. Both colors are configurable per theme. Its weather icon sits at the hour-hand tip, following the hand through its launch animation too.
 - Each future slot shows an icon instead of its temperature when the visual weather category changes; otherwise it shows a temperature without a degree symbol. Clear day/night, cloud, fog, rain, snow, thunderstorm, and unknown conditions have distinct symbols. Partly cloudy and overcast share the cloud icon; precipitation intensities share their category.
-- The phone fetches 24 hourly samples every 30 minutes from [Open-Meteo](https://open-meteo.com/en/docs), using location permission. No API key is required. The ring advances locally each hour and caches across restarts. After three hours without a fresh forecast it displays dashes and hides icons.
+- The phone fetches 24 hourly samples every 30 minutes from [Open-Meteo](https://open-meteo.com/en/docs), using location permission. No API key is required. The ring advances locally each hour and caches across restarts. Before weather arrives, and after three hours without a fresh forecast, it restores Crisp’s original ticks, hand lengths, date placement, and corner layout.
 - Temperature units follow the existing Auto / Celsius / Fahrenheit setting. The lower-right weather corner remains the daily low/high.
 
 Sun/moon/storm accents use yellow on dark backgrounds and dark amber on light backgrounds; rain uses cyan or dark blue respectively. Monochrome icons follow the theme foreground.
 
-The icon at the hour hand represents the **current hourly forecast**, not a live observation. Weather changes have hourly precision. On first launch, dashes remain until the phone supplies weather. The corner low/high retains Crisp’s last received daily values independently of ring expiry.
+The icon at the hour hand represents the **current hourly forecast**, not a live observation. Weather changes have hourly precision. On first launch, the face looks like Crisp until the phone supplies weather. The corner low/high retains Crisp’s last received daily values independently of ring expiry.
 
 ## Build and test
 

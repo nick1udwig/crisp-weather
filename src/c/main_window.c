@@ -17,6 +17,7 @@ static bool s_animating, s_connected;
 // at window_load so a Timeline Quick View peek (which shrinks the working area)
 // never flips the date/corner fonts mid-animation.
 static bool s_big;
+static bool s_forecast_available;
 static AppTimer *s_anim_timer;
 
 #if defined(PBL_HEALTH)
@@ -35,6 +36,12 @@ static int s_heart_halfw, s_heart_gap;
 static void corners_update(void);
 static void corners_rebuild(void);
 static void relayout(GRect visible);
+static void apply_unobstructed(void);
+
+static bool forecast_available(void) {
+  int temp, kind;
+  return forecast_get(time(NULL), 0, &temp, &kind);
+}
 
 // Theme-driven structural colors. The eight user accent colors are unaffected;
 // these only cover what used to be hardcoded black/white: the panel background,
@@ -47,6 +54,15 @@ static GColor theme_bg(void) {
 static GColor theme_fg(void) {
   return (config_get_theme() == THEME_LIGHT) ? GColorBlack : GColorWhite;
 }
+
+#ifdef PBL_COLOR
+// Muted "off" color for the spent part of the battery gauge on color displays:
+// dark gray on a black panel, light gray on a white one. (On B&W the empty
+// segment blends into the background instead, so this is unused there.)
+static GColor theme_battery_empty(void) {
+  return (config_get_theme() == THEME_LIGHT) ? GColorLightGray : GColorDarkGray;
+}
+#endif
 
 // Runtime layout, derived once from the display size so everything scales
 // across platforms (emery 200x228 rect, gabbro 260x260 round, classic 144x168).
@@ -76,8 +92,8 @@ static void layout_init(GRect bounds) {
   s_layout.thickness = scaled(LAYOUT_BASE_THICKNESS);
   if (s_layout.thickness < 2) s_layout.thickness = 2;
   s_layout.hand_sec  = scaled(LAYOUT_BASE_HAND_SEC);
-  s_layout.hand_min  = scaled(47);
-  s_layout.hand_hour = scaled(37);
+  s_layout.hand_min  = scaled(s_forecast_available ? 47 : LAYOUT_BASE_HAND_MIN);
+  s_layout.hand_hour = scaled(s_forecast_available ? 37 : LAYOUT_BASE_HAND_HOUR);
   s_layout.tick_hour = scaled(LAYOUT_BASE_TICK_HOUR);
   s_layout.tick_min  = scaled(LAYOUT_BASE_TICK_MIN);
   s_layout.center_dot = scaled(LAYOUT_BASE_CENTER);
@@ -89,6 +105,23 @@ static GPoint point_at(int32_t angle, int len) {
     .x = (int16_t)(sin_lookup(angle) * (int32_t)len / TRIG_MAX_RATIO) + s_layout.center.x,
     .y = (int16_t)(-cos_lookup(angle) * (int32_t)len / TRIG_MAX_RATIO) + s_layout.center.y,
   };
+}
+
+// Distance from the center to the display boundary (inset by the margin) along
+// the given angle. On round displays that is a constant radius; on rectangular
+// ones it follows the rectangle edge so the markers hug the border.
+static int boundary_radius(int32_t angle) {
+#ifdef CRISP_ROUND_DIAL
+  return s_layout.radius - s_layout.margin;
+#else
+  int32_t s = sin_lookup(angle);
+  int32_t c = cos_lookup(angle);
+  int hw = s_layout.halfw - s_layout.margin;
+  int hh = s_layout.halfh - s_layout.margin;
+  int rx = (s == 0) ? (1 << 20) : (int)((int64_t)hw * TRIG_MAX_RATIO / (s > 0 ? s : -s));
+  int ry = (c == 0) ? (1 << 20) : (int)((int64_t)hh * TRIG_MAX_RATIO / (c > 0 ? c : -c));
+  return (rx < ry) ? rx : ry;
+#endif
 }
 
 static void update_time(struct tm *now) {
@@ -111,6 +144,7 @@ static void update_time(struct tm *now) {
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits changed) {
+  if (forecast_available() != s_forecast_available) apply_unobstructed();
   update_time(tick_time);
   corners_update();
   layer_mark_dirty(s_bg_layer);
@@ -449,10 +483,67 @@ static void draw_forecast(GContext *ctx) {
     GTextOverflowModeTrailingEllipsis,GTextAlignmentCenter,NULL);
 }
 
+static void draw_crisp_ticks(GContext *ctx) {
+  BatteryChargeState state = battery_state_service_peek();
+  int perc = state.charge_percent;
+  int batt_hours = (int)(12.0F * ((float)perc / 100.0F)) + 1;
+
+  int mmin = ( s_last_time.minutes / 5 ) * 5;
+  int mmax = ( mmin + 5 );
+
+  for(int m = 0; m < 60; m++) {
+    int h = m / 5;
+    bool isHourMarker = ( m % 5 ) == 0;
+    int thickness = isHourMarker ? s_layout.thickness : (s_layout.thickness > 2 ? 2 : 1);
+    int tick_len = isHourMarker ? s_layout.tick_hour : s_layout.tick_min;
+
+    if (!isHourMarker && ( m < mmin || m > mmax )) continue;
+
+    int32_t angle = TRIG_MAX_ANGLE * m / 60;
+    int r_out = boundary_radius(angle);
+    GPoint p_out = point_at(angle, r_out);
+    GPoint p_in = point_at(angle, r_out - tick_len);
+
+#ifdef PBL_COLOR
+    GColor marker_color = isHourMarker
+      ? GColorFromHEX(config_get_color(PERSIST_KEY_HOUR_MARKERS_COLOR))
+      : GColorFromHEX(config_get_color(PERSIST_KEY_MINUTE_MARKERS_COLOR));
+#else
+    GColor marker_color = theme_fg();
+#endif
+
+    GColor draw_color = marker_color;
+    if (config_get(PERSIST_KEY_BATTERY) && isHourMarker) {
+      if (h < batt_hours) {
+#ifdef PBL_COLOR
+        draw_color = state.is_plugged
+          ? GColorFromHEX(config_get_color(PERSIST_KEY_CHARGING_MARKERS_COLOR))
+          : marker_color;
+#else
+        draw_color = theme_fg();
+#endif
+      } else {
+        // Empty battery segment: muted gray on color, blended into the panel
+        // background (invisible) on B&W.
+        draw_color = PBL_IF_COLOR_ELSE(theme_battery_empty(), theme_bg());
+      }
+    }
+
+    graphics_context_set_stroke_color(ctx, draw_color);
+    graphics_context_set_stroke_width(ctx, thickness);
+    graphics_draw_line(ctx, p_in, p_out);
+  }
+}
+
 static void bg_update_proc(Layer *layer, GContext *ctx) {
   // Antialiasing is meaningful only on the color (non 1-bit) displays; enabling
   // it on B&W aplite hits a slow path and is pointless there.
   graphics_context_set_antialiased(ctx, PBL_IF_COLOR_ELSE(ANTIALIASING, false));
+
+  if (!s_forecast_available) {
+    draw_crisp_ticks(ctx);
+    return;
+  }
 
   // Crisp's four minute marks between the bounding hour positions. Keep them
   // on the outer rim, clear of the temperature/icon slots just inside it.
@@ -627,6 +718,7 @@ static void bt_handler(bool connected) {
 
 static void batt_handler(BatteryChargeState state) {
   corners_update();
+  layer_mark_dirty(s_bg_layer);
   layer_mark_dirty(s_canvas_layer);
 }
 
@@ -639,12 +731,15 @@ static void batt_handler(BatteryChargeState state) {
 // Fonts and the big/small height switch stay fixed (driven by s_big, captured
 // from the full-screen radius) so a peek never reflows the text.
 static void relayout(GRect visible) {
+  s_forecast_available = forecast_available();
   layout_init(visible);
 
   int day_h = s_big ? LAYOUT_DATE_DAY_H_BIG : LAYOUT_DATE_DAY_H_SMALL;
   int label_h = s_big ? LAYOUT_DATE_LABEL_H_BIG : LAYOUT_DATE_LABEL_H_SMALL;
-  int block_w = scaled(25);
-  int block_x = s_layout.center.x + scaled(10);
+  int block_w = s_forecast_available ? scaled(25) :
+    visible.size.w * LAYOUT_DATE_BLOCK_W_NUM / LAYOUT_DATE_BLOCK_W_DEN;
+  int block_x = s_layout.center.x + (s_forecast_available ? scaled(10) :
+    visible.size.w * LAYOUT_DATE_BLOCK_X_NUM / LAYOUT_DATE_BLOCK_X_DEN);
   if (block_x + block_w > visible.size.w) {
     block_x = visible.size.w - block_w;
   }
@@ -659,8 +754,8 @@ static void relayout(GRect visible) {
 #ifdef PBL_ROUND
   // The forecast occupies the former round-screen corner positions. Keep the
   // day on the right and use compact interior readouts on these displays.
-  layer_set_hidden(text_layer_get_layer(s_weekday_layer), true);
-  layer_set_hidden(text_layer_get_layer(s_month_layer), true);
+  layer_set_hidden(text_layer_get_layer(s_weekday_layer), s_forecast_available);
+  layer_set_hidden(text_layer_get_layer(s_month_layer), s_forecast_available);
 #endif
 
   // Corner readouts sit in the true panel corners on rectangular displays
@@ -682,7 +777,7 @@ static void relayout(GRect visible) {
   s_corner_rect[CORNER_POS_BL] = GRect(inset,   bottom_y, corner_w, corner_h);
   s_corner_rect[CORNER_POS_BR] = GRect(right_x, bottom_y, corner_w, corner_h);
 #ifdef PBL_ROUND
-  for (int i = 0; i < NUM_CORNERS; i++) {
+  if (s_forecast_available) for (int i = 0; i < NUM_CORNERS; i++) {
     int x = s_layout.center.x + scaled((i == CORNER_POS_TL || i == CORNER_POS_BL) ? -32 : 2);
     int y = s_layout.center.y + scaled(i < 2 ? -28 : 18);
     s_corner_rect[i] = GRect(x,y,scaled(32),18);
@@ -690,6 +785,11 @@ static void relayout(GRect visible) {
 #endif
   for(int i = 0; i < NUM_CORNERS; i++) {
     layer_set_frame(text_layer_get_layer(s_corner_layer[i]), s_corner_rect[i]);
+    const char *corner_font = s_big ? FONT_KEY_GOTHIC_18_BOLD : FONT_KEY_GOTHIC_14_BOLD;
+#ifdef PBL_ROUND
+    if (s_forecast_available) corner_font = FONT_KEY_GOTHIC_14;
+#endif
+    text_layer_set_font(s_corner_layer[i], fonts_get_system_font(corner_font));
   }
 }
 
@@ -892,6 +992,8 @@ void main_window_push() {
 
 void main_window_refresh(void) {
   if(!s_main_window) return;
+
+  apply_unobstructed();
 
   // A fresh config may have toggled the second hand (changes the tick rate) or
   // reassigned the corners; re-apply both and repaint with any new colors.
