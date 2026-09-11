@@ -54,6 +54,15 @@ void config_init() {
     persist_write_bool(PERSIST_KEY_HR_INDICATOR, true);
   }
 
+  // Seed new colors for existing installs without replacing user choices.
+  if(!persist_exists(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_CURRENT_TEMP_COLOR)) {
+    persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_CURRENT_TEMP_COLOR,
+      persist_read_int(PERSIST_KEY_THEME) == THEME_LIGHT ? 0x000000 : 0xFFFFFF);
+  }
+  if(!persist_exists(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_FUTURE_TEMP_COLOR)) {
+    persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_FUTURE_TEMP_COLOR, 0xFFAA00);
+  }
+
   for(int i = 0; i < NUM_SETTINGS; i++) {
     s_arr[i] = persist_read_bool(i);
   }

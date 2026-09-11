@@ -24,7 +24,9 @@ module.exports = function() {
     'TIPS_COLOR',
     'SECOND_HAND_COLOR',
     'SECOND_TIP_COLOR',
-    'CALENDAR_DAY_COLOR'
+    'CALENDAR_DAY_COLOR',
+    'CURRENT_TEMP_COLOR',
+    'FUTURE_TEMP_COLOR'
   ];
 
   // Per-theme default palettes (THEME select values: '0' = dark, '1' = light).
@@ -39,7 +41,9 @@ module.exports = function() {
       TIPS_COLOR: 'ffffff',
       SECOND_HAND_COLOR: 'aa0000',
       SECOND_TIP_COLOR: 'ffff00',
-      CALENDAR_DAY_COLOR: 'ffff00'
+      CALENDAR_DAY_COLOR: 'ffff00',
+      CURRENT_TEMP_COLOR: 'ffffff',
+      FUTURE_TEMP_COLOR: 'ffaa00'
     },
     '1': {
       HOUR_MARKERS_COLOR: '000000',
@@ -49,7 +53,9 @@ module.exports = function() {
       TIPS_COLOR: '000000',
       SECOND_HAND_COLOR: 'ff0000',
       SECOND_TIP_COLOR: 'ff5500',
-      CALENDAR_DAY_COLOR: '0055aa'
+      CALENDAR_DAY_COLOR: '0055aa',
+      CURRENT_TEMP_COLOR: '000000',
+      FUTURE_TEMP_COLOR: 'ffaa00'
     }
   };
 
@@ -101,7 +107,13 @@ module.exports = function() {
     var raw = readStore(storageKey(theme));
     if (raw) {
       try {
-        return JSON.parse(raw);
+        var saved = JSON.parse(raw);
+        var palette = defaultPalette(theme);
+        for (var i = 0; i < COLOR_KEYS.length; i++) {
+          var key = COLOR_KEYS[i];
+          if (saved[key] != null) palette[key] = saved[key];
+        }
+        return palette;
       } catch (e) {
         // Corrupt entry: fall through to defaults.
       }

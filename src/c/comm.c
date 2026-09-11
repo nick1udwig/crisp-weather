@@ -77,6 +77,9 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
   config_changed |= store_color(iter, MESSAGE_KEY_SECOND_TIP_COLOR,       PERSIST_KEY_SECOND_TIP_COLOR);
   config_changed |= store_color(iter, MESSAGE_KEY_CALENDAR_DAY_COLOR,     PERSIST_KEY_CALENDAR_DAY_COLOR);
 
+  config_changed |= store_color(iter, MESSAGE_KEY_CURRENT_TEMP_COLOR, PERSIST_KEY_CURRENT_TEMP_COLOR);
+  config_changed |= store_color(iter, MESSAGE_KEY_FUTURE_TEMP_COLOR, PERSIST_KEY_FUTURE_TEMP_COLOR);
+
   // Corner selections.
   config_changed |= store_corner(iter, MESSAGE_KEY_CORNER_TL, CORNER_POS_TL);
   config_changed |= store_corner(iter, MESSAGE_KEY_CORNER_TR, CORNER_POS_TR);

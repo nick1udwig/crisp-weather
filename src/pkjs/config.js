@@ -163,6 +163,20 @@ module.exports = [
         "sunlight": false
       },
       {
+        "type": "color",
+        "messageKey": "CURRENT_TEMP_COLOR",
+        "label": "Current hour temperature",
+        "defaultValue": "ffffff",
+        "sunlight": false
+      },
+      {
+        "type": "color",
+        "messageKey": "FUTURE_TEMP_COLOR",
+        "label": "Future temperatures",
+        "defaultValue": "ffaa00",
+        "sunlight": false
+      },
+      {
         // Resets the pickers above to the current theme's default palette
         // (handled in custom-clay.js; no messageKey, nothing sent on its own).
         "type": "button",

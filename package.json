@@ -55,7 +55,9 @@
       "WEATHER_TEMP_MAX",
       "WEATHER_PRECIP",
       "FORECAST_START",
-      "FORECAST_DATA"
+      "FORECAST_DATA",
+      "CURRENT_TEMP_COLOR",
+      "FUTURE_TEMP_COLOR"
     ],
     "resources": {
       "media": [

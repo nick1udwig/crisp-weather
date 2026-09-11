@@ -427,8 +427,9 @@ static void draw_forecast(GContext *ctx) {
     } else {
       snprintf(label, sizeof(label), "--");
     }
-    graphics_context_set_text_color(ctx, ahead == 0 ?
-      weather_accent(false) : theme_fg());
+    graphics_context_set_text_color(ctx, PBL_IF_COLOR_ELSE(
+      GColorFromHEX(config_get_color(ahead == 0 ?
+        PERSIST_KEY_CURRENT_TEMP_COLOR : PERSIST_KEY_FUTURE_TEMP_COLOR)), theme_fg()));
     bool wide = valid && (temp >= 100 || temp <= -10);
     graphics_draw_text(ctx, label,
       fonts_get_system_font(wide ? (s_big ? FONT_KEY_GOTHIC_18_BOLD : FONT_KEY_GOTHIC_14) :

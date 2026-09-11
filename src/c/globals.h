@@ -123,7 +123,9 @@
 #define PERSIST_KEY_SECOND_HAND_COLOR      5
 #define PERSIST_KEY_SECOND_TIP_COLOR       6
 #define PERSIST_KEY_CALENDAR_DAY_COLOR     7
-#define NUM_COLORS                         8
+#define PERSIST_KEY_CURRENT_TEMP_COLOR     8
+#define PERSIST_KEY_FUTURE_TEMP_COLOR      9
+#define NUM_COLORS                        10
 
 // --- Screen corners -------------------------------------------------------
 // Each of the four corners can show one optional readout. The value stored per
