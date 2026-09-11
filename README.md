@@ -2,6 +2,7 @@
 
 A Pebble watchface based on [Michal Bláha’s Crisp](https://github.com/michalblaha/Crisp-watchface), with a forecast around the analog dial. The original two-tone hands, right-side date, themes, and configurable readouts are retained. Round watches use the day number and compact interior readouts to leave room for the ring.
 
+- Experimental: the trailing forecast slots back to the preceding 12/3/6/9 position become Crisp ticks (10 → tick at 9; 11 → ticks at 9 and 10; cardinal hours → no reserved ticks).
 - Twelve forecast slots replace the ticks: the current hour and the next eleven hours, clockwise. At 10:08, the 3 o’clock position is the forecast for 15:00.
 - Four short minute ticks appear in the active five-minute section (for example, minutes 6–9 at 10:08), advancing with the minute hand.
 - The current hour always shows its temperature in the dial, even when its weather changes. On color watches, current-hour temperatures default to black on light themes and white on dark themes; future temperatures default to amber. Both colors are configurable per theme. Its weather icon sits at the hour-hand tip, following the hand through its launch animation too.

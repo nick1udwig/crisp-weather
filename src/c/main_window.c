@@ -1,5 +1,6 @@
 #include "main_window.h"
 #include "forecast.h"
+#include "dial.h"
 
 static Window *s_main_window;
 static TextLayer *s_weekday_layer, *s_day_in_month_layer, *s_month_layer;
@@ -439,13 +440,20 @@ static void weather_icon(GContext *ctx, GPoint p, int kind) {
   }
 }
 
+static void draw_crisp_tick(GContext *ctx, int minute, bool battery_gauge);
+
 static void draw_forecast(GContext *ctx) {
   time_t now = time(NULL);
   struct tm local = *localtime(&now);
   int temp, kind, previous = -1;
   int radius = s_layout.radius - scaled(11);
   for (int ahead = 0; ahead < 12; ahead++) {
-    int32_t angle = TRIG_MAX_ANGLE * ((local.tm_hour + ahead) % 12) / 12;
+    int hour = (local.tm_hour + ahead) % 12;
+    if (forecast_slot_is_tick(local.tm_hour, ahead)) {
+      draw_crisp_tick(ctx, hour * 5, false);
+      continue;
+    }
+    int32_t angle = TRIG_MAX_ANGLE * hour / 12;
     GPoint p = point_at(angle, radius);
     char label[9];
     bool valid = forecast_get(now, ahead, &temp, &kind);
@@ -483,55 +491,58 @@ static void draw_forecast(GContext *ctx) {
     GTextOverflowModeTrailingEllipsis,GTextAlignmentCenter,NULL);
 }
 
-static void draw_crisp_ticks(GContext *ctx) {
+static void draw_crisp_tick(GContext *ctx, int m, bool battery_gauge) {
   BatteryChargeState state = battery_state_service_peek();
-  int perc = state.charge_percent;
-  int batt_hours = (int)(12.0F * ((float)perc / 100.0F)) + 1;
+  int batt_hours = (int)(12.0F * ((float)state.charge_percent / 100.0F)) + 1;
+  int h = m / 5;
+  bool isHourMarker = ( m % 5 ) == 0;
+  int thickness = isHourMarker ? s_layout.thickness : (s_layout.thickness > 2 ? 2 : 1);
+  int tick_len = isHourMarker ? s_layout.tick_hour : s_layout.tick_min;
 
-  int mmin = ( s_last_time.minutes / 5 ) * 5;
-  int mmax = ( mmin + 5 );
-
-  for(int m = 0; m < 60; m++) {
-    int h = m / 5;
-    bool isHourMarker = ( m % 5 ) == 0;
-    int thickness = isHourMarker ? s_layout.thickness : (s_layout.thickness > 2 ? 2 : 1);
-    int tick_len = isHourMarker ? s_layout.tick_hour : s_layout.tick_min;
-
-    if (!isHourMarker && ( m < mmin || m > mmax )) continue;
-
-    int32_t angle = TRIG_MAX_ANGLE * m / 60;
-    int r_out = boundary_radius(angle);
-    GPoint p_out = point_at(angle, r_out);
-    GPoint p_in = point_at(angle, r_out - tick_len);
+  int32_t angle = TRIG_MAX_ANGLE * m / 60;
+  int r_out = boundary_radius(angle);
+  GPoint p_out = point_at(angle, r_out);
+  GPoint p_in = point_at(angle, r_out - tick_len);
 
 #ifdef PBL_COLOR
-    GColor marker_color = isHourMarker
-      ? GColorFromHEX(config_get_color(PERSIST_KEY_HOUR_MARKERS_COLOR))
-      : GColorFromHEX(config_get_color(PERSIST_KEY_MINUTE_MARKERS_COLOR));
+  GColor marker_color = isHourMarker
+    ? GColorFromHEX(config_get_color(PERSIST_KEY_HOUR_MARKERS_COLOR))
+    : GColorFromHEX(config_get_color(PERSIST_KEY_MINUTE_MARKERS_COLOR));
 #else
-    GColor marker_color = theme_fg();
+  GColor marker_color = theme_fg();
 #endif
 
-    GColor draw_color = marker_color;
-    if (config_get(PERSIST_KEY_BATTERY) && isHourMarker) {
-      if (h < batt_hours) {
+  // Forecast-reserved ticks follow the same theme foreground as the minute
+  // ticks. The legacy marker palette has no Clay controls and can retain white
+  // after switching to a light theme, making these ticks disappear.
+  GColor draw_color = battery_gauge ? marker_color : theme_fg();
+  if (battery_gauge && config_get(PERSIST_KEY_BATTERY) && isHourMarker) {
+    if (h < batt_hours) {
 #ifdef PBL_COLOR
-        draw_color = state.is_plugged
-          ? GColorFromHEX(config_get_color(PERSIST_KEY_CHARGING_MARKERS_COLOR))
-          : marker_color;
+      draw_color = state.is_plugged
+        ? GColorFromHEX(config_get_color(PERSIST_KEY_CHARGING_MARKERS_COLOR))
+        : marker_color;
 #else
-        draw_color = theme_fg();
+      draw_color = theme_fg();
 #endif
-      } else {
-        // Empty battery segment: muted gray on color, blended into the panel
-        // background (invisible) on B&W.
-        draw_color = PBL_IF_COLOR_ELSE(theme_battery_empty(), theme_bg());
-      }
+    } else {
+      // Empty battery segment: muted gray on color, blended into the panel
+      // background (invisible) on B&W.
+      draw_color = PBL_IF_COLOR_ELSE(theme_battery_empty(), theme_bg());
     }
+  }
 
-    graphics_context_set_stroke_color(ctx, draw_color);
-    graphics_context_set_stroke_width(ctx, thickness);
-    graphics_draw_line(ctx, p_in, p_out);
+  graphics_context_set_stroke_color(ctx, draw_color);
+  graphics_context_set_stroke_width(ctx, thickness);
+  graphics_draw_line(ctx, p_in, p_out);
+}
+
+static void draw_crisp_ticks(GContext *ctx) {
+  int section_start = (s_last_time.minutes / 5) * 5;
+  for (int minute = 0; minute < 60; minute++) {
+    if (minute % 5 != 0 &&
+        (minute < section_start || minute > section_start + 5)) continue;
+    draw_crisp_tick(ctx, minute, true);
   }
 }
 
