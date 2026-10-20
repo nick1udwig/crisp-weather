@@ -165,7 +165,7 @@ function create(env) {
     var s = status();
     return s.message + '\nLocation: ' + s.source +
       '\nLast success: ' + (s.schedule.lastSuccess ? new Date(s.schedule.lastSuccess).toISOString() : 'Never') +
-      '\nForecast age: ' + (s.cache.age === null ? 'Unavailable' : Math.floor(s.cache.age/60) + ' minutes') +
+      '\nForecast age: ' + (s.cache.age === null ? 'Unavailable' : s.cache.age < 0 ? 'Clock changed' : Math.floor(s.cache.age/60) + ' minutes') +
       '\nNext allowed request: ' + new Date(s.schedule.next).toISOString();
   }
   return {start:check,check:check,reconnect:reconnect,configure:configure,status:status,diagnostics:diagnostics};

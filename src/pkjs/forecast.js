@@ -10,13 +10,14 @@ function icon(code, day) {
 }
 function number(value) { return typeof value === 'number' && isFinite(value); }
 function sample(values, index) { return Array.isArray(values) ? values[index] : undefined; }
+function timestamp(value) { return number(value) && value > 0 && value <= 2147483647 && value === Math.floor(value); }
 function temperature(value) { return number(value) && value >= -100 && value <= 100; }
 function parse(data, now) {
   if (!data || typeof data !== 'object') throw new Error('Invalid forecast response');
   var h = data.hourly || {}, daily = data.daily || {}, payload = {};
   var times = Array.isArray(h.time) ? h.time : [], i = -1;
   for (var j = 0; j < times.length; j++) {
-    if (number(times[j]) && times[j] <= now && now < times[j] + 3600) i = j;
+    if (timestamp(times[j]) && times[j] <= now && now < times[j] + 3600) i = j;
   }
   if (i >= 0) {
     var bytes = [], usable = false;
@@ -42,7 +43,7 @@ function parse(data, now) {
   var days = Array.isArray(daily.time) ? daily.time : [];
   for (j = 0; j < days.length; j++) {
     var end = number(days[j+1]) ? days[j+1] : days[j] + 86400;
-    if (!(number(days[j]) && days[j] <= now && now < end)) continue;
+    if (!(timestamp(days[j]) && timestamp(end) && end-days[j] <= 90000 && days[j] <= now && now < end)) continue;
     var lo = sample(daily.temperature_2m_min, j), hi = sample(daily.temperature_2m_max, j);
     if (temperature(lo) && temperature(hi) && lo <= hi) {
       payload.WEATHER_TEMP_MIN = Math.round(lo);

@@ -3,12 +3,19 @@ var MINUTE = 60000, HOUR = 60 * MINUTE, DAY = 24 * HOUR;
 function number(n) { return typeof n === 'number' && isFinite(n) && n >= 0; }
 function create(storage, now, random) {
   random = random || Math.random;
-  var state = {}, readable = true;
-  try { state = JSON.parse(storage.getItem(KEY)) || {}; } catch (e) { readable = false; }
-  if (!state || typeof state !== 'object' || Array.isArray(state)) state = {};
-  state.attempts = Array.isArray(state.attempts) ? state.attempts.filter(number).slice(-96) : [];
+  var state = {}, readable = true, corrupt = false, raw;
+  try { raw = storage.getItem(KEY); } catch (e) { readable = false; }
+  if (raw) {
+    try { state = JSON.parse(raw); } catch (e) { corrupt = true; }
+    if (!state || typeof state !== 'object' || Array.isArray(state) || !Array.isArray(state.attempts)) corrupt = true;
+  }
+  if (corrupt) state = {attempts:[],next:now()+DAY,clock:now()};
+  state.attempts = Array.isArray(state.attempts) ? state.attempts.filter(number).sort(function(a,b) { return a-b; }).slice(-96) : [];
   state.next = number(state.next) ? state.next : 0;
   state.clock = number(state.clock) ? state.clock : now();
+  state.failures = number(state.failures) ? Math.min(4,Math.floor(state.failures)) : 0;
+  state.rateFailures = number(state.rateFailures) ? Math.min(6,Math.floor(state.rateFailures)) : 0;
+  state.lastSuccess = number(state.lastSuccess) ? state.lastSuccess : 0;
   function persist() {
     try { storage.setItem(KEY, JSON.stringify(state)); return true; } catch (e) { return false; }
   }
@@ -18,6 +25,8 @@ function create(storage, now, random) {
       var shift = time - state.clock;
       state.attempts = state.attempts.map(function(t) { return t + shift; });
       state.next = Math.max(0, state.next + shift);
+      state.clock = time;
+      persist();
     }
     state.clock = time;
     state.attempts = state.attempts.filter(function(t) { return t > time - DAY; });
@@ -58,6 +67,7 @@ function create(storage, now, random) {
     defer(delay + Math.floor(delay * 0.1 * random()));
   }
   function status() { return {next:now()+wait(), lastSuccess:state.lastSuccess || 0, attempts:state.attempts.length}; }
+  if (corrupt) persist();
   return {wait:wait, reserve:reserve, defer:defer, success:success, failure:failure, status:status};
 }
 module.exports = {create:create};

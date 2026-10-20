@@ -9,7 +9,7 @@ var RAIN = ['WEATHER_PRECIP', 'WEATHER_RAIN_UNTIL'];
 function create(storage) {
   var state = {};
   try { state = JSON.parse(storage.getItem(KEY)) || {}; } catch (e) {}
-  if (!state || typeof state !== 'object') state = {};
+  if (!state || typeof state !== 'object' || Array.isArray(state)) state = {};
   function put(payload) {
     if (payload.FORECAST_DATA) { state.dial = {}; copy(state.dial, payload, DIAL); }
     if (payload.WEATHER_DAILY_UNTIL) { state.daily = {}; copy(state.daily, payload, DAILY); }

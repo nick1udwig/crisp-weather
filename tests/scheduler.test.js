@@ -50,3 +50,22 @@ test('transient backoff and repeated rate limits survive restarts',()=>{
   s.failure('rate');assert.equal(s.wait(),7200000);
   f.advance(7200000);s.failure('rate',180000);assert.equal(s.wait(),180000);
 });
+test('corrupt history is repaired with a persisted conservative cooldown',()=>{
+  const f=fixture();f.storage.setItem('crisp-weather-schedule-v1','{broken');
+  let s=create(f.storage,f.now);assert.equal(s.wait(),86400000);assert(!s.reserve());
+  f.advance(3600000);s=create(f.storage,f.now);assert.equal(s.wait(),23*3600000);
+  f.advance(23*3600000);assert(s.reserve());
+});
+test('continuous outage with repeated reconnects stays within every rolling budget',()=>{
+  const f=fixture(), attempts=[];let s=create(f.storage,f.now,()=>0);
+  for(let minute=0;minute<3*24*60;minute++){
+    if(minute%7===0)s=create(f.storage,f.now,()=>0);
+    for(let trigger=0;trigger<3;trigger++)if(s.reserve())attempts.push(f.now());
+    f.advance(60000);
+  }
+  for(const end of attempts){
+    for(const [window,limit] of [[60000,1],[3600000,6],[86400000,96]]){
+      assert(attempts.filter(t=>t<=end && t>end-window).length<=limit);
+    }
+  }
+});

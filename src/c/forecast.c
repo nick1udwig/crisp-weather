@@ -14,6 +14,8 @@ bool forecast_receive(DictionaryIterator *iter) {
       (fetched->type != TUPLE_INT && fetched->type != TUPLE_UINT) || start->length != 4 ||
       (start->type != TUPLE_INT && start->type != TUPLE_UINT) ||
       data->type != TUPLE_BYTE_ARRAY || data->length != sizeof(s_forecast.data)) return false;
+  int32_t hour = start->value->int32, fetched_at = fetched->value->int32;
+  if (hour <= 0 || fetched_at < hour || fetched_at - hour >= 3600) return false;
   uint8_t bytes[FORECAST_HOURS * 2];
   memcpy(bytes, data->value->data, sizeof(bytes));
   for (int i = 0; i < FORECAST_HOURS; i++)

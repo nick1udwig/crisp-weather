@@ -87,3 +87,33 @@ test('watch check resumes weather after phone timers have been suspended',()=>{
   assert.match(service.diagnostics(),/Forecast age: 31 minutes/);
   assert.match(service.diagnostics(),/Next allowed request:/);
 });
+test('location watchdog recovers from no callback and ignores late positions',()=>{
+  const f=runtime(), service=create(f.env);service.start();f.advance(16000);
+  assert.match(service.status().message,/Location unavailable/);
+  f.locate(0);assert.equal(f.requests.length,0);
+  f.advance(60000);assert.equal(f.locations.length,2);f.locate();assert.equal(f.requests.length,1);
+});
+test('an old saved location is not silently used',()=>{
+  const f=runtime();f.values['crisp-weather-location-v1']=JSON.stringify({fix:{coords:{latitude:1,longitude:2},at:f.env.now()-7*3600000}});
+  const service=create(f.env);service.start();f.locations[0].failure({code:2,message:'Unavailable'});
+  assert.equal(f.requests.length,0);
+});
+test('late weather from an old location cannot overwrite the new location cache',()=>{
+  const f=runtime(), service=create(f.env);service.start();f.locate();
+  service.configure({WEATHER_LOCATION_MODE:'1',WEATHER_LATITUDE:'20',WEATHER_LONGITUDE:'30'});
+  f.respond();assert.equal(f.sent.length,0);assert(f.requests[0].aborted);
+  f.advance(60000);assert.equal(f.requests.length,2);
+  assert.match(f.requests[1].url,/latitude=20&longitude=30/);
+  f.respond();assert.equal(f.sent.length,1);
+});
+test('unavailable Retry-After header access still gives HTTP 429 a long cooldown',()=>{
+  const f=runtime(), service=create(f.env);service.start();f.locate();
+  f.requests[0].getResponseHeader=()=>{throw Error('Unavailable');};f.respond(429);
+  f.advance(3599999);assert.equal(f.locations.length,1);
+});
+test('missing delivery callbacks have bounded retries without extra HTTP requests',()=>{
+  const f=runtime();f.env.send=payload=>f.sent.push(payload);
+  const service=create(f.env);service.start();f.locate();f.respond();
+  f.advance(120000);assert.equal(f.sent.length,4);assert.equal(f.requests.length,1);
+  service.check();assert.equal(f.sent.length,4);
+});

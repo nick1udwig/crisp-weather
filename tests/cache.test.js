@@ -35,3 +35,8 @@ test('unavailable and corrupt storage cannot prevent weather delivery',()=>{
   cache.put(payload());assert.deepEqual(cache.get(now),payload());
   assert.equal(create({getItem:()=>'{broken'}).get(now),null);
 });
+test('structurally corrupt cache can recover and persist a fresh payload',()=>{
+  const storage=store();storage.setItem('crisp-weather-cache-v1','[]');
+  const cache=create(storage);cache.put(payload());
+  assert.deepEqual(create(storage).get(now),payload());
+});

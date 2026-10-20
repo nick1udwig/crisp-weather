@@ -45,3 +45,19 @@ test('marks a timestamp gap as missing without shifting later samples',()=>{
   assert.equal(p.FORECAST_DATA[10],255);
   assert.equal(p.FORECAST_DATA[12],97);
 });
+test('daily values change at the API local midnight without changing their expiry on replay',()=>{
+  const d=fixture();d.daily.temperature_2m_min.push(1);d.daily.temperature_2m_max.push(8);
+  const midnight=d.daily.time[1];
+  assert.equal(parse(d,midnight-1).WEATHER_TEMP_MIN,-5);
+  const next=parse(d,midnight);
+  assert.equal(next.WEATHER_TEMP_MIN,1);
+  assert.equal(next.WEATHER_DAILY_UNTIL,midnight+86400);
+});
+test('invalid numeric values do not fabricate temperatures, rain, or timestamps',()=>{
+  const d=fixture();d.hourly.temperature_2m[0]=NaN;d.hourly.temperature_2m[1]=101;
+  d.hourly.precipitation_probability[0]=-1;d.daily.temperature_2m_min[0]=12;
+  const p=parse(d,d.hourly.time[0]);
+  assert.equal(p.FORECAST_DATA[0],255);assert.equal(p.FORECAST_DATA[2],255);
+  assert.equal(p.WEATHER_PRECIP,undefined);assert.equal(p.WEATHER_TEMP_MIN,undefined);
+  assert.throws(()=>parse({hourly:{time:[1700000000.5],temperature_2m:[10]}},1700000001),/No usable/);
+});
