@@ -21,8 +21,15 @@ var GEO_MAX_AGE_MS = 10 * 60 * 1000;      // accept a cached fix up to 10 min ol
 var WEATHER_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 
 var forecast = require('./forecast');
+var weatherCache = require('./weather-cache').create(localStorage);
 function parseWeather(body) {
   var payload = forecast.parse(JSON.parse(body), Math.floor(Date.now() / 1000));
+  weatherCache.put(payload);
+  sendWeather(weatherCache.get(Math.floor(Date.now() / 1000)));
+}
+
+function sendWeather(payload) {
+  if (!payload) return;
   Pebble.sendAppMessage(payload, function() {}, function(e) {
     console.log('Weather send failed: ' + JSON.stringify(e));
   });
@@ -63,6 +70,7 @@ function fetchWeather() {
 
 Pebble.addEventListener('ready', function() {
   console.log('Crisp PebbleKit JS ready');
+  sendWeather(weatherCache.get(Math.floor(Date.now() / 1000)));
   fetchWeather();
   setInterval(fetchWeather, WEATHER_REFRESH_MS);
 });

@@ -231,7 +231,7 @@ static void format_corner(int kind, char *buf, size_t n) {
     }
     case CORNER_WEATHER: {
       int lo, hi;
-      if(weather_daily(&lo, &hi)) {
+      if(weather_daily(time(NULL), &lo, &hi)) {
         // Today's low/high, e.g. "8/15°" (UTF-8 degree sign). Stored in Celsius;
         // convert for display when Fahrenheit is selected.
         if(weather_use_fahrenheit()) {
@@ -246,7 +246,7 @@ static void format_corner(int kind, char *buf, size_t n) {
     }
     case CORNER_PRECIP: {
       int rain;
-      if(weather_rain(&rain)) {
+      if(weather_rain(time(NULL), &rain)) {
         snprintf(buf, n, "%d%%", rain);
       } else {
         snprintf(buf, n, "--%%");

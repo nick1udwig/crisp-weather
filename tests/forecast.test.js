@@ -5,7 +5,7 @@ function fixture() {
   return {hourly:{time:Array.from({length:48},(_,i)=>1700000000+i*3600),
     temperature_2m:Array(48).fill(-2.6), weather_code:Array(48).fill(61),
     is_day:Array(48).fill(1), precipitation_probability:Array(48).fill(80)},
-    daily:{temperature_2m_min:[-5],temperature_2m_max:[4]}};
+    daily:{time:[1700000000,1700086400],temperature_2m_min:[-5],temperature_2m_max:[4]}};
 }
 test('selects current hour and packs 24 hours across midnight',()=>{
   const d=fixture(), p=parse(d,d.hourly.time[23]+3599);
@@ -23,7 +23,7 @@ test('keeps valid components when hourly temperatures or rain are missing',()=>{
 });
 test('daily, hourly and rain data work independently',()=>{
   const d=fixture();
-  assert.deepEqual(parse({daily:d.daily},1700000000),{WEATHER_TEMP_MIN:-5,WEATHER_TEMP_MAX:4});
+  assert.deepEqual(parse({daily:d.daily},1700000000),{WEATHER_TEMP_MIN:-5,WEATHER_TEMP_MAX:4,WEATHER_DAILY_UNTIL:1700086400});
   delete d.daily;
   assert.equal(parse(d,1700000000).WEATHER_PRECIP,80);
   d.hourly.weather_code[0]=null;

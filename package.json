@@ -58,7 +58,10 @@
       "FORECAST_DATA",
       "CURRENT_TEMP_COLOR",
       "FUTURE_TEMP_COLOR",
-      "BT_VIBRATE"
+      "BT_VIBRATE",
+      "WEATHER_FETCHED_AT",
+      "WEATHER_DAILY_UNTIL",
+      "WEATHER_RAIN_UNTIL"
     ],
     "resources": {
       "media": [

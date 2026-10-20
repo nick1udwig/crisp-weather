@@ -30,15 +30,25 @@ function parse(data, now) {
     }
     if (usable) {
       payload.FORECAST_START = times[i];
+      payload.WEATHER_FETCHED_AT = now;
       payload.FORECAST_DATA = bytes;
     }
     var rain = sample(h.precipitation_probability, i);
-    if (number(rain) && rain >= 0 && rain <= 100) payload.WEATHER_PRECIP = Math.round(rain);
+    if (number(rain) && rain >= 0 && rain <= 100) {
+      payload.WEATHER_PRECIP = Math.round(rain);
+      payload.WEATHER_RAIN_UNTIL = times[i] + 3600;
+    }
   }
-  var lo = sample(daily.temperature_2m_min, 0), hi = sample(daily.temperature_2m_max, 0);
-  if (temperature(lo) && temperature(hi) && lo <= hi) {
-    payload.WEATHER_TEMP_MIN = Math.round(lo);
-    payload.WEATHER_TEMP_MAX = Math.round(hi);
+  var days = Array.isArray(daily.time) ? daily.time : [];
+  for (j = 0; j < days.length; j++) {
+    var end = number(days[j+1]) ? days[j+1] : days[j] + 86400;
+    if (!(number(days[j]) && days[j] <= now && now < end)) continue;
+    var lo = sample(daily.temperature_2m_min, j), hi = sample(daily.temperature_2m_max, j);
+    if (temperature(lo) && temperature(hi) && lo <= hi) {
+      payload.WEATHER_TEMP_MIN = Math.round(lo);
+      payload.WEATHER_TEMP_MAX = Math.round(hi);
+      payload.WEATHER_DAILY_UNTIL = end;
+    }
   }
   if (!Object.keys(payload).length) throw new Error('No usable weather');
   return payload;
