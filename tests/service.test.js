@@ -19,3 +19,63 @@ test('partial API success is cached and does not cause immediate refetch',()=>{
   assert.equal(f.sent[0].FORECAST_DATA,undefined);
   service.check();assert.equal(f.requests.length,1);
 });
+test('network failure retries with backoff and missing callbacks cannot stall HTTP',()=>{
+  const f=runtime(), service=create(f.env);
+  service.start();f.locate();f.requests[0].onerror();
+  f.advance(59999);assert.equal(f.locations.length,1);
+  f.advance(1);f.locate();assert.equal(f.requests.length,2);
+  f.advance(21000);assert(f.requests[1].aborted);
+  f.respond(200,f.body(),1);assert.equal(f.sent.length,0);
+  f.advance(5*60000);assert.equal(f.locations.length,3);
+});
+test('HTTP 429 obeys Retry-After across restarts and triggers',()=>{
+  const f=runtime();let service=create(f.env);
+  service.start();f.locate();f.requests[0].retryAfter='7200';f.respond(429);
+  f.timers.clear();service=create(f.env);service.start();service.reconnect();
+  f.advance(7199999);assert.equal(f.locations.length,1);
+  f.advance(1);assert.equal(f.locations.length,2);
+});
+test('HTTP date Retry-After and absent headers both enforce cooldowns',()=>{
+  for(const date of [false,true]){
+    const f=runtime(), service=create(f.env);
+    service.start();f.locate();
+    if(date)f.requests[0].retryAfter=new Date(f.env.now()+2*3600000).toUTCString();
+    f.respond(429);
+    f.advance((date?2:1)*3600000-1);assert.equal(f.locations.length,1);
+    f.advance(1);assert.equal(f.locations.length,2);
+  }
+});
+test('Bluetooth retries never refetch and stop after three retries until reconnect',()=>{
+  const f=runtime();f.env.deliveryError=true;
+  const service=create(f.env);service.start();f.locate();f.respond();
+  f.advance(80000);assert.equal(f.sent.length,4);assert.equal(f.requests.length,1);
+  service.check();assert.equal(f.sent.length,4);
+  f.env.deliveryError=false;service.reconnect();
+  assert.equal(f.sent.length,5);assert.equal(f.requests.length,1);
+});
+test('a recent saved fix survives restart and is used only for unavailable location',()=>{
+  const f=runtime();let service=create(f.env);service.start();f.locate();f.respond();
+  f.timers.clear();f.advance(30*60000);service=create(f.env);service.start();
+  f.locations[1].failure({code:2,message:'Unavailable'});
+  assert.equal(f.requests.length,2);
+  assert.match(f.requests[1].url,/latitude=37.77/);
+  f.respond();f.advance(30*60000);
+  f.locations[2].failure({code:1,message:'Denied'});
+  assert.equal(f.requests.length,2);assert.match(service.status().message,/permission denied/);
+});
+test('manual coordinates bypass location permission and invalid coordinates never reach API',()=>{
+  const f=runtime(), service=create(f.env);
+  service.configure({WEATHER_LOCATION_MODE:'1',WEATHER_LATITUDE:'0',WEATHER_LONGITUDE:'0'});
+  assert.equal(f.locations.length,0);assert.equal(f.requests.length,1);
+  assert.match(f.requests[0].url,/latitude=0&longitude=0/);
+  const bad=runtime(), invalid=create(bad.env);
+  invalid.configure({WEATHER_LOCATION_MODE:'1',WEATHER_LATITUDE:'NaN',WEATHER_LONGITUDE:'181'});
+  assert.equal(bad.requests.length,0);assert.match(invalid.status().message,/Manual location invalid/);
+});
+test('malformed JSON and HTTP 400 do not trigger fast retries',()=>{
+  for(const [code,body] of [[200,'{broken'],[400,'bad request']]){
+    const f=runtime(), service=create(f.env);service.start();f.locate();f.respond(code,body);
+    f.advance(30*60000-1);assert.equal(f.requests.length,1);
+    f.advance(1);assert.equal(f.locations.length,2);
+  }
+});

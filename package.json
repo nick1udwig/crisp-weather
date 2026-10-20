@@ -61,7 +61,10 @@
       "BT_VIBRATE",
       "WEATHER_FETCHED_AT",
       "WEATHER_DAILY_UNTIL",
-      "WEATHER_RAIN_UNTIL"
+      "WEATHER_RAIN_UNTIL",
+      "WEATHER_LOCATION_MODE",
+      "WEATHER_LATITUDE",
+      "WEATHER_LONGITUDE"
     ],
     "resources": {
       "media": [

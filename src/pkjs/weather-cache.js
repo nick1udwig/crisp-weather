@@ -34,6 +34,10 @@ function create(storage) {
         rain.WEATHER_PRECIP >= 0 && rain.WEATHER_PRECIP <= 100) copy(result, rain, RAIN);
     return Object.keys(result).length ? result : null;
   }
-  return {put:put, get:get};
+  function clear() {
+    state = {};
+    try { storage.setItem(KEY, '{}'); } catch (e) {}
+  }
+  return {put:put, get:get, clear:clear};
 }
 module.exports = {create:create};

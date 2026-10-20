@@ -125,6 +125,25 @@ module.exports = [
   {
     "type": "section",
     "items": [
+      { "type": "heading", "defaultValue": "Weather location" },
+      { "type": "text", "id": "weatherStatus", "defaultValue": "Waiting for weather" },
+      {
+        "type": "select", "messageKey": "WEATHER_LOCATION_MODE", "label": "Location source", "defaultValue": "0",
+        "options": [{"label":"Phone location","value":"0"},{"label":"Manual coordinates","value":"1"}]
+      },
+      {
+        "type": "input", "messageKey": "WEATHER_LATITUDE", "label": "Latitude", "defaultValue": "",
+        "description": "Manual location: -90 to 90. Use a decimal point.", "attributes": {"type":"text","maxlength":20}
+      },
+      {
+        "type": "input", "messageKey": "WEATHER_LONGITUDE", "label": "Longitude", "defaultValue": "",
+        "description": "Manual location: -180 to 180. West is negative.", "attributes": {"type":"text","maxlength":20}
+      }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
       {
         "type": "heading",
         "defaultValue": "Colors"

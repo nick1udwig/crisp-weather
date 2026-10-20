@@ -163,6 +163,14 @@ module.exports = function() {
   }
 
   clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function() {
+    var status = clayConfig.getItemById('weatherStatus');
+    var meta = clayConfig.meta;
+    if (status && meta && meta.userData && meta.userData.weatherStatus) {
+      status.set(meta.userData.weatherStatus.replace(/[&<>"']/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      }));
+    }
+
     var themeItem = clayConfig.getItemByMessageKey('THEME');
     if (!themeItem) {
       return;

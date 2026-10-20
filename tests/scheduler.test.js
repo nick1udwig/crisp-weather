@@ -39,3 +39,14 @@ test('HTTP is blocked if request history cannot be read or saved',()=>{
   assert(!create({getItem(){throw Error('disabled');},setItem(){}},f.now).reserve());
   assert(!create({getItem:()=>null,setItem(){throw Error('full');}},f.now).reserve());
 });
+test('transient backoff and repeated rate limits survive restarts',()=>{
+  const f=fixture();let s=create(f.storage,f.now,()=>0);
+  for(const minutes of [1,5,15,30,30]) {
+    s.failure('transient');assert.equal(s.wait(),minutes*60000);
+    f.advance(minutes*60000);s=create(f.storage,f.now,()=>0);
+  }
+  s.failure('rate');assert.equal(s.wait(),3600000);
+  f.advance(3600000);s=create(f.storage,f.now,()=>0);
+  s.failure('rate');assert.equal(s.wait(),7200000);
+  f.advance(7200000);s.failure('rate',180000);assert.equal(s.wait(),180000);
+});
