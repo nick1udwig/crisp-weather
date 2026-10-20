@@ -3,10 +3,12 @@
 An analog Pebble watchface with an hourly weather forecast around the dial.
 Based on [Michal Bláha’s Crisp](https://github.com/michalblaha/Crisp-watchface), it keeps the two-tone hands, themes, date, and configurable corner readouts.
 
-![Crisp Weather in a dark theme](screenshots/emery.png)
-![Crisp Weather in a light theme](screenshots/emery-light.png)
+| Watch shape | Dark theme | Light theme |
+| --- | --- | --- |
+| Rectangular (emery) | ![Dark theme on emery](screenshots/emery.png) | ![Light theme on emery with improved contrast](screenshots/emery-light.png) |
+| Round (gabbro) | ![Dark theme on gabbro](screenshots/gabbro.png) | ![Light theme on gabbro with improved contrast](screenshots/gabbro-light.png) |
 
-*Emulator previews with illustrative weather data.*
+*v0.2.0 emulator previews with illustrative weather data and the updated light palette.*
 
 ## Features
 
