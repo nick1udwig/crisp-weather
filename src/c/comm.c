@@ -95,6 +95,10 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
 
   if (!config_changed && !weather_changed) return;
 
+  bool complete_palette = dict_find(iter, MESSAGE_KEY_HOUR_MARKERS_COLOR) &&
+    dict_find(iter, MESSAGE_KEY_MINUTE_MARKERS_COLOR) && dict_find(iter, MESSAGE_KEY_CHARGING_MARKERS_COLOR);
+  if (complete_palette) persist_write_bool(PERSIST_KEY_LIGHT_PALETTE_V2,true);
+
   // Refresh the live store and the face.
   config_init();
   main_window_refresh();

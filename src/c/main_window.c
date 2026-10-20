@@ -48,7 +48,7 @@ static bool forecast_available(void) {
   return false;
 }
 
-// Theme-driven structural colors. The eight user accent colors are unaffected;
+// Theme-driven structural colors. The user accent colors are unaffected;
 // these only cover what used to be hardcoded black/white: the panel background,
 // the date/corner text, the B&W marker/hand fallback, and the fills that must
 // read as "the background" (empty battery segment, hollow disconnect cap).
@@ -62,10 +62,10 @@ static GColor theme_fg(void) {
 
 #ifdef PBL_COLOR
 // Muted "off" color for the spent part of the battery gauge on color displays:
-// dark gray on a black panel, light gray on a white one. (On B&W the empty
+// dark gray against either background. (On B&W the empty
 // segment blends into the background instead, so this is unused there.)
 static GColor theme_battery_empty(void) {
-  return (config_get_theme() == THEME_LIGHT) ? GColorLightGray : GColorDarkGray;
+  return GColorDarkGray;
 }
 #endif
 
@@ -378,7 +378,7 @@ static void animate(int duration, int delay, AnimationImplementation *implementa
 static GColor weather_accent(bool rain) {
 #ifdef PBL_COLOR
   if (config_get_theme() == THEME_LIGHT)
-    return GColorFromHEX(rain ? 0x0055AA : 0xAA5500);
+    return GColorFromHEX(rain ? 0x000055 : 0x555500);
   return rain ? GColorCyan : GColorYellow;
 #else
   return theme_fg();
@@ -524,10 +524,7 @@ static void draw_crisp_tick(GContext *ctx, int m, bool battery_gauge) {
   GColor marker_color = theme_fg();
 #endif
 
-  // Forecast-reserved ticks follow the same theme foreground as the minute
-  // ticks. The legacy marker palette has no Clay controls and can retain white
-  // after switching to a light theme, making these ticks disappear.
-  GColor draw_color = battery_gauge ? marker_color : theme_fg();
+  GColor draw_color = marker_color;
   if (battery_gauge && config_get(PERSIST_KEY_BATTERY) && isHourMarker) {
     if (h < batt_hours) {
 #ifdef PBL_COLOR

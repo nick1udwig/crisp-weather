@@ -106,11 +106,12 @@
 // Color theme of the dial. DARK (the shipped default) draws light markers/text
 // on a black panel; LIGHT inverts the background and the structural colors (the
 // text, the B&W marker/hand fallback, the empty battery segment and the hollow
-// disconnect cap). The eight user accent colors stay user-controlled; the phone
+// disconnect cap). The user accent colors stay user-controlled; the phone
 // (Clay) remembers a separate accent palette per theme and resends the matching
 // one on switch, so the watch only ever holds the active palette.
 #define PERSIST_KEY_THEME      7
 #define PERSIST_KEY_BT_VIBRATE 8
+#define PERSIST_KEY_LIGHT_PALETTE_V2 9
 #define THEME_DARK             0
 #define THEME_LIGHT            1
 

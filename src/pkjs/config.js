@@ -153,6 +153,18 @@ module.exports = [
         "defaultValue": "These accents are remembered per theme: switching the theme above loads that theme's own colors."
       },
       {
+        "type": "color", "messageKey": "HOUR_MARKERS_COLOR", "label": "Hour ticks",
+        "defaultValue": "ffffff", "sunlight": false
+      },
+      {
+        "type": "color", "messageKey": "MINUTE_MARKERS_COLOR", "label": "Minute ticks",
+        "defaultValue": "aaaaaa", "sunlight": false
+      },
+      {
+        "type": "color", "messageKey": "CHARGING_MARKERS_COLOR", "label": "Charging ticks",
+        "defaultValue": "00ff00", "sunlight": false
+      },
+      {
         "type": "color",
         "messageKey": "HANDS_COLOR",
         "label": "Hour & minute hands",

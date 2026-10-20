@@ -15,6 +15,7 @@ Based on [Michal Bláha’s Crisp](https://github.com/michalblaha/Crisp-watchfac
 - See the current hour’s temperature on the dial and its weather icon at the hour-hand tip.
   Future hours show an icon when conditions change, otherwise a temperature.
 - Customize themes, forecast colors on color watches, corner readouts, temperature units, and Bluetooth disconnect alerts.
+  Light mode uses dark tick marks, dark blue forecast numbers, and dark weather accents.
 - Get weather from [Open-Meteo](https://open-meteo.com/) through your phone every 30 minutes, with no API key.
   Use phone location permission or set manual coordinates in settings.
   Internet access is required.

@@ -36,5 +36,24 @@ int main(void) {
   config_init();
   assert(config_get_bt_vibrate());
   assert(config_get_color(PERSIST_KEY_CURRENT_TEMP_COLOR) == 0);
+  assert(config_get_color(PERSIST_KEY_FUTURE_TEMP_COLOR) == 0x0055AA);
+  assert(config_get_color(PERSIST_KEY_HOUR_MARKERS_COLOR) == 0);
+  assert(config_get_color(PERSIST_KEY_MINUTE_MARKERS_COLOR) == 0x555555);
+  assert(config_get_color(PERSIST_KEY_CHARGING_MARKERS_COLOR) == 0x005500);
+  assert(config_get_color(PERSIST_KEY_CALENDAR_DAY_COLOR) == 0x000055);
+
+  memset(values, 0, sizeof(values));
+  memset(exists, 0, sizeof(exists));
+  persist_write_bool(PERSIST_DEFAULTS_SET, true);
+  persist_write_int(PERSIST_KEY_THEME, THEME_LIGHT);
+  persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_HOUR_MARKERS_COLOR, 0xFFFFFF);
+  persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_FUTURE_TEMP_COLOR, 0xFFAA00);
+  persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_HANDS_COLOR, 0x550055);
+  config_init();
+  assert(config_get_color(PERSIST_KEY_HOUR_MARKERS_COLOR) == 0);
+  assert(config_get_color(PERSIST_KEY_FUTURE_TEMP_COLOR) == 0x0055AA);
+  assert(config_get_color(PERSIST_KEY_HANDS_COLOR) == 0x550055);
+  persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_FUTURE_TEMP_COLOR, 0xFFAA00);
+  config_init();
   assert(config_get_color(PERSIST_KEY_FUTURE_TEMP_COLOR) == 0xFFAA00);
 }

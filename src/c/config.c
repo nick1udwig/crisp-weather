@@ -7,6 +7,25 @@ static int s_corners[NUM_CORNERS];
 static int s_temp_unit;
 static int s_theme;
 
+static void migrate_light_defaults(void) {
+  if (persist_read_int(PERSIST_KEY_THEME) != THEME_LIGHT || persist_exists(PERSIST_KEY_LIGHT_PALETTE_V2)) return;
+  static const uint32_t previous[NUM_COLORS] = {
+    0x000000,0x555555,0x00AA00,0x555555,0x000000,0xFF0000,0xFF5500,0x0055AA,0x000000,0xFFAA00
+  };
+  static const uint32_t defaults[NUM_COLORS] = {
+    0x000000,0x555555,0x005500,0x555555,0x000000,0xAA0000,0x550000,0x000055,0x000000,0x0055AA
+  };
+  for (int i = 0; i < NUM_COLORS; i++) {
+    int key = PERSIST_KEY_COLOR_OFFSET + i;
+    uint32_t value = persist_read_int(key);
+    bool inherited_tick = (i == PERSIST_KEY_HOUR_MARKERS_COLOR && value == 0xFFFFFF) ||
+      (i == PERSIST_KEY_MINUTE_MARKERS_COLOR && value == 0xAAAAAA) ||
+      (i == PERSIST_KEY_CHARGING_MARKERS_COLOR && value == 0x00FF00);
+    if (!persist_exists(key) || value == previous[i] || inherited_tick) persist_write_int(key,defaults[i]);
+  }
+  persist_write_bool(PERSIST_KEY_LIGHT_PALETTE_V2,true);
+}
+
 void config_init() {
   // Set defaults on first launch (before any config arrives from the phone).
   if(!persist_exists(PERSIST_DEFAULTS_SET)) {
@@ -62,8 +81,11 @@ void config_init() {
       persist_read_int(PERSIST_KEY_THEME) == THEME_LIGHT ? 0x000000 : 0xFFFFFF);
   }
   if(!persist_exists(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_FUTURE_TEMP_COLOR)) {
-    persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_FUTURE_TEMP_COLOR, 0xFFAA00);
+    persist_write_int(PERSIST_KEY_COLOR_OFFSET + PERSIST_KEY_FUTURE_TEMP_COLOR,
+      persist_read_int(PERSIST_KEY_THEME) == THEME_LIGHT ? 0x0055AA : 0xFFAA00);
   }
+
+  migrate_light_defaults();
 
   for(int i = 0; i < NUM_SETTINGS; i++) {
     s_arr[i] = persist_read_bool(i);
@@ -79,8 +101,6 @@ void config_init() {
 
   s_temp_unit = persist_read_int(PERSIST_KEY_TEMP_UNIT);
   s_theme     = persist_read_int(PERSIST_KEY_THEME);
-
-
 }
 
 bool config_get_bt_vibrate(void) {

@@ -40,13 +40,13 @@ def capture(platform, theme, partial, output):
         "THEME": int(light), "TEMP_UNIT": 1, "CORNER_TL": 1, "CORNER_TR": 3, "CORNER_BL": 4, "CORNER_BR": 5,
         "HOUR_MARKERS_COLOR": 0x000000 if light else 0xFFFFFF,
         "MINUTE_MARKERS_COLOR": 0x555555 if light else 0xAAAAAA,
-        "CHARGING_MARKERS_COLOR": 0x00AA00 if light else 0x00FF00,
-        "CURRENT_TEMP_COLOR": 0x000000 if light else 0xFFFFFF, "FUTURE_TEMP_COLOR": 0xFFAA00,
+        "CHARGING_MARKERS_COLOR": 0x005500 if light else 0x00FF00,
+        "CURRENT_TEMP_COLOR": 0x000000 if light else 0xFFFFFF, "FUTURE_TEMP_COLOR": 0x0055AA if light else 0xFFAA00,
         "TIPS_COLOR": 0x000000 if light else 0xFFFFFF,
         "HANDS_COLOR": 0x555555 if light else 0xAAAAAA,
-        "SECOND_HAND_COLOR": 0xFF0000 if light else 0xAA0000,
-        "SECOND_TIP_COLOR": 0xFF5500 if light else 0xFFFF00,
-        "CALENDAR_DAY_COLOR": 0xAA5500 if light else 0xFFFF55,
+        "SECOND_HAND_COLOR": 0xAA0000,
+        "SECOND_TIP_COLOR": 0x550000 if light else 0xFFFF00,
+        "CALENDAR_DAY_COLOR": 0x000055 if light else 0xFFFF55,
     }
     send(platform, settings)
     temps = [19, 20, 22, 23, 22, 20, 18, 17, 16, 15, 14, 13] * 2

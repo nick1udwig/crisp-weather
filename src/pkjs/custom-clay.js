@@ -48,18 +48,23 @@ module.exports = function() {
     '1': {
       HOUR_MARKERS_COLOR: '000000',
       MINUTE_MARKERS_COLOR: '555555',
-      CHARGING_MARKERS_COLOR: '00aa00',
+      CHARGING_MARKERS_COLOR: '005500',
       HANDS_COLOR: '555555',
       TIPS_COLOR: '000000',
-      SECOND_HAND_COLOR: 'ff0000',
-      SECOND_TIP_COLOR: 'ff5500',
-      CALENDAR_DAY_COLOR: '0055aa',
+      SECOND_HAND_COLOR: 'aa0000',
+      SECOND_TIP_COLOR: '550000',
+      CALENDAR_DAY_COLOR: '000055',
       CURRENT_TEMP_COLOR: '000000',
-      FUTURE_TEMP_COLOR: 'ffaa00'
+      FUTURE_TEMP_COLOR: '0055aa'
     }
   };
 
   var STORAGE_PREFIX = 'crisp-palette-';
+  var LIGHT_VERSION_KEY = 'crisp-light-palette-version';
+  var LEGACY_LIGHT = {
+    CHARGING_MARKERS_COLOR:'00aa00', SECOND_HAND_COLOR:'ff0000', SECOND_TIP_COLOR:'ff5500',
+    CALENDAR_DAY_COLOR:'0055aa', FUTURE_TEMP_COLOR:'ffaa00'
+  };
 
   // Some config webviews disable / throw on localStorage. Accessing it must
   // never abort AFTER_BUILD (that would skip every handler registration below
@@ -104,25 +109,28 @@ module.exports = function() {
 
   // The saved palette for a theme, falling back to its defaults.
   function loadPalette(theme) {
-    var raw = readStore(storageKey(theme));
+    var palette = defaultPalette(theme), raw = readStore(storageKey(theme));
     if (raw) {
       try {
         var saved = JSON.parse(raw);
-        var palette = defaultPalette(theme);
         for (var i = 0; i < COLOR_KEYS.length; i++) {
           var key = COLOR_KEYS[i];
           if (saved[key] != null) palette[key] = saved[key];
         }
-        return palette;
-      } catch (e) {
-        // Corrupt entry: fall through to defaults.
-      }
+      } catch (e) {}
     }
-    return defaultPalette(theme);
+    if (String(theme) === '1' && readStore(LIGHT_VERSION_KEY) !== '2') {
+      Object.keys(LEGACY_LIGHT).forEach(function(key) {
+        if (toHex(palette[key]).toLowerCase() === LEGACY_LIGHT[key]) palette[key] = PALETTES['1'][key];
+      });
+      savePalette(theme,palette);
+    }
+    return palette;
   }
 
   function savePalette(theme, palette) {
     writeStore(storageKey(theme), JSON.stringify(palette));
+    if (String(theme) === '1') writeStore(LIGHT_VERSION_KEY,'2');
   }
 
   // The color manipulator's get() returns an integer, while the seed defaults
