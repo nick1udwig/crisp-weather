@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "forecast.h"
+#include "weather.h"
 #include "main_window.h"
 #include "comm.h"
 #include "config.h"
@@ -7,6 +8,7 @@
 int main() {
   setlocale(LC_ALL, "");
   forecast_init();
+  weather_init();
   comm_init();
   config_init();
 

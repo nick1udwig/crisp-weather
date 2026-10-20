@@ -1,5 +1,6 @@
 #include "main_window.h"
 #include "forecast.h"
+#include "weather.h"
 #include "dial.h"
 
 static Window *s_main_window;
@@ -41,7 +42,9 @@ static void apply_unobstructed(void);
 
 static bool forecast_available(void) {
   int temp, kind;
-  return forecast_get(time(NULL), 0, &temp, &kind);
+  for (int i = 0; i < 12; i++)
+    if (forecast_get(time(NULL), i, &temp, &kind)) return true;
+  return false;
 }
 
 // Theme-driven structural colors. The eight user accent colors are unaffected;
@@ -226,12 +229,11 @@ static void format_corner(int kind, char *buf, size_t n) {
 #endif
       break;
     }
-    case CORNER_WEATHER:
-      if(config_get_weather_valid()) {
+    case CORNER_WEATHER: {
+      int lo, hi;
+      if(weather_daily(&lo, &hi)) {
         // Today's low/high, e.g. "8/15°" (UTF-8 degree sign). Stored in Celsius;
         // convert for display when Fahrenheit is selected.
-        int lo = config_get_weather_temp_min();
-        int hi = config_get_weather_temp_max();
         if(weather_use_fahrenheit()) {
           lo = celsius_to_fahrenheit(lo);
           hi = celsius_to_fahrenheit(hi);
@@ -241,13 +243,16 @@ static void format_corner(int kind, char *buf, size_t n) {
         snprintf(buf, n, "--/--\xC2\xB0");
       }
       break;
-    case CORNER_PRECIP:
-      if(config_get_weather_valid()) {
-        snprintf(buf, n, "%d%%", config_get_weather_precip());
+    }
+    case CORNER_PRECIP: {
+      int rain;
+      if(weather_rain(&rain)) {
+        snprintf(buf, n, "%d%%", rain);
       } else {
         snprintf(buf, n, "--%%");
       }
       break;
+    }
     default:
       buf[0] = '\0';
       break;
@@ -457,6 +462,11 @@ static void draw_forecast(GContext *ctx) {
     GPoint p = point_at(angle, radius);
     char label[9];
     bool valid = forecast_get(now, ahead, &temp, &kind);
+    if (!valid) {
+      draw_crisp_tick(ctx, hour * 5, false);
+      previous = -1;
+      continue;
+    }
     // The current hour always keeps its temperature; its icon is on the hand.
     if (valid && ahead > 0 && kind != previous) {
       weather_icon(ctx, p, kind);

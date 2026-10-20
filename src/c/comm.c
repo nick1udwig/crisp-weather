@@ -1,5 +1,6 @@
 #include "comm.h"
 #include "forecast.h"
+#include "weather.h"
 #include "main_window.h"
 #include <stdlib.h>  // atoi
 
@@ -46,14 +47,6 @@ static bool store_corner(DictionaryIterator *iter, uint32_t message_key, int cor
   return store_select(iter, message_key, PERSIST_KEY_CORNER_OFFSET + corner_pos);
 }
 
-// Store one integer weather field. Returns whether it was present.
-static bool store_int(DictionaryIterator *iter, uint32_t message_key, int persist_key) {
-  Tuple *t = dict_find(iter, message_key);
-  if (!t) return false;
-  persist_write_int(persist_key, tuple_get_int(t));
-  return true;
-}
-
 static void in_recv_handler(DictionaryIterator *iter, void *context) {
   bool config_changed = false;
 
@@ -96,15 +89,8 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
   // this theme.
   config_changed |= store_select(iter, MESSAGE_KEY_THEME, PERSIST_KEY_THEME);
 
-  // Weather sample relayed by the phone (separate from a config edit). When a
-  // sample arrives, mark the cache valid so the corners stop showing "--".
   bool weather_changed = forecast_receive(iter);
-  weather_changed |= store_int(iter, MESSAGE_KEY_WEATHER_TEMP_MIN, PERSIST_KEY_WEATHER_TEMP_MIN);
-  weather_changed |= store_int(iter, MESSAGE_KEY_WEATHER_TEMP_MAX, PERSIST_KEY_WEATHER_TEMP_MAX);
-  weather_changed |= store_int(iter, MESSAGE_KEY_WEATHER_PRECIP,   PERSIST_KEY_WEATHER_PRECIP);
-  if (weather_changed) {
-    persist_write_bool(PERSIST_KEY_WEATHER_VALID, true);
-  }
+  weather_changed |= weather_receive(iter);
 
   if (!config_changed && !weather_changed) return;
 

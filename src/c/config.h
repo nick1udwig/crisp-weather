@@ -16,9 +16,3 @@ int config_get_temp_unit(void);
 
 // Active color theme (THEME_DARK / THEME_LIGHT).
 int config_get_theme(void);
-
-// Latest weather sample relayed by the phone.
-bool config_get_weather_valid(void);
-int config_get_weather_temp_min(void);
-int config_get_weather_temp_max(void);
-int config_get_weather_precip(void);

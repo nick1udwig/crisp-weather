@@ -13,10 +13,25 @@ test('selects current hour and packs 24 hours across midnight',()=>{
   assert.equal(p.FORECAST_DATA.length,48);
   assert.deepEqual(p.FORECAST_DATA.slice(0,2),[97,4]);
 });
-test('rejects missing, null and incomplete weather instead of fabricating clear skies',()=>{
-  const d=fixture(); d.hourly.temperature_2m[3]=null;
-  assert.throws(()=>parse(d,d.hourly.time[0]));
-  assert.throws(()=>parse(fixture(),1700000000+25*3600));
+test('keeps valid components when hourly temperatures or rain are missing',()=>{
+  const d=fixture(); d.hourly.temperature_2m[3]=null; d.hourly.precipitation_probability[0]=null;
+  const p=parse(d,d.hourly.time[0]);
+  assert.equal(p.FORECAST_DATA[6],255);
+  assert.equal(p.WEATHER_TEMP_MIN,-5);
+  assert.equal(p.WEATHER_PRECIP,undefined);
+  assert.equal(parse(fixture(),1700000000+25*3600).FORECAST_DATA[46],255);
+});
+test('daily, hourly and rain data work independently',()=>{
+  const d=fixture();
+  assert.deepEqual(parse({daily:d.daily},1700000000),{WEATHER_TEMP_MIN:-5,WEATHER_TEMP_MAX:4});
+  delete d.daily;
+  assert.equal(parse(d,1700000000).WEATHER_PRECIP,80);
+  d.hourly.weather_code[0]=null;
+  assert.equal(parse(d,1700000000).FORECAST_DATA[1],7);
+  d.hourly.is_day[0]=null;
+  assert.equal(parse(d,1700000000).FORECAST_DATA[1],7);
+  assert.throws(()=>parse({},1700000000),/No usable/);
+  assert.throws(()=>parse(null,1700000000),/Invalid/);
 });
 test('groups conditions by icon and distinguishes clear nights',()=>{
   assert.equal(icon(0,1),0); assert.equal(icon(0,0),1);
@@ -24,7 +39,9 @@ test('groups conditions by icon and distinguishes clear nights',()=>{
   assert.equal(icon(45,1),3); assert.equal(icon(75,1),5);
   assert.equal(icon(95,1),6); assert.equal(icon(123,1),7);
 });
-test('rejects noncontiguous hourly timestamps',()=>{
+test('marks a timestamp gap as missing without shifting later samples',()=>{
   const d=fixture();d.hourly.time[5]+=3600;
-  assert.throws(()=>parse(d,d.hourly.time[0]));
+  const p=parse(d,d.hourly.time[0]);
+  assert.equal(p.FORECAST_DATA[10],255);
+  assert.equal(p.FORECAST_DATA[12],97);
 });

@@ -148,14 +148,6 @@
 #define CORNER_POS_BR 3
 #define NUM_CORNERS   4
 
-// Latest weather sample relayed by the phone (Tier 3 via PebbleKit JS). Cached
-// so the weather/precip corners survive a relaunch until the next refresh. The
-// weather corner shows today's forecast low/high; precip is the current hour.
-#define PERSIST_KEY_WEATHER_TEMP_MIN 30   // degrees Celsius, rounded (today low)
-#define PERSIST_KEY_WEATHER_PRECIP   31   // percent, 0..100
-#define PERSIST_KEY_WEATHER_VALID    32   // bool: a sample has ever arrived
-#define PERSIST_KEY_WEATHER_TEMP_MAX 33   // degrees Celsius, rounded (today high)
-
 typedef struct {
   int days;
   int hours;

@@ -15,7 +15,7 @@ bool forecast_receive(DictionaryIterator *iter) {
   uint8_t bytes[FORECAST_HOURS * 2];
   memcpy(bytes, data->value->data, sizeof(bytes));
   for (int i = 0; i < FORECAST_HOURS; i++)
-    if (bytes[i*2] > 200 || bytes[i*2+1] > 7) return false;
+    if ((bytes[i*2] > 200 && bytes[i*2] != 255) || bytes[i*2+1] > 7) return false;
   s_forecast.start = start->value->int32;
   memcpy(s_forecast.data, data->value->data, sizeof(s_forecast.data));
   persist_write_data(FORECAST_PERSIST, &s_forecast, sizeof(s_forecast));
@@ -25,7 +25,7 @@ bool forecast_get(time_t now, int ahead, int *temp, int *icon) {
   // Expire after three hours without an update; never rotate old weather into tomorrow.
   if (!s_forecast.start || now < s_forecast.start || now - s_forecast.start >= 3*3600) return false;
   int i = (now - s_forecast.start) / 3600 + ahead;
-  if (i < 0 || i >= FORECAST_HOURS) return false;
+  if (i < 0 || i >= FORECAST_HOURS || s_forecast.data[i*2] == 255) return false;
   *temp = s_forecast.data[i*2] - 100;
   *icon = s_forecast.data[i*2+1];
   return true;

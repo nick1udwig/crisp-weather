@@ -6,10 +6,6 @@ static uint32_t s_colors[NUM_COLORS];
 static int s_corners[NUM_CORNERS];
 static int s_temp_unit;
 static int s_theme;
-static int s_weather_temp_min;
-static int s_weather_temp_max;
-static int s_weather_precip;
-static bool s_weather_valid;
 
 void config_init() {
   // Set defaults on first launch (before any config arrives from the phone).
@@ -84,10 +80,7 @@ void config_init() {
   s_temp_unit = persist_read_int(PERSIST_KEY_TEMP_UNIT);
   s_theme     = persist_read_int(PERSIST_KEY_THEME);
 
-  s_weather_valid    = persist_read_bool(PERSIST_KEY_WEATHER_VALID);
-  s_weather_temp_min = persist_read_int(PERSIST_KEY_WEATHER_TEMP_MIN);
-  s_weather_temp_max = persist_read_int(PERSIST_KEY_WEATHER_TEMP_MAX);
-  s_weather_precip   = persist_read_int(PERSIST_KEY_WEATHER_PRECIP);
+
 }
 
 bool config_get_bt_vibrate(void) {
@@ -112,20 +105,4 @@ int config_get_temp_unit(void) {
 
 int config_get_theme(void) {
   return s_theme;
-}
-
-bool config_get_weather_valid(void) {
-  return s_weather_valid;
-}
-
-int config_get_weather_temp_min(void) {
-  return s_weather_temp_min;
-}
-
-int config_get_weather_temp_max(void) {
-  return s_weather_temp_max;
-}
-
-int config_get_weather_precip(void) {
-  return s_weather_precip;
 }

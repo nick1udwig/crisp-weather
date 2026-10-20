@@ -9,26 +9,38 @@ function icon(code, day) {
   return 7;
 }
 function number(value) { return typeof value === 'number' && isFinite(value); }
+function sample(values, index) { return Array.isArray(values) ? values[index] : undefined; }
+function temperature(value) { return number(value) && value >= -100 && value <= 100; }
 function parse(data, now) {
-  var h = data.hourly, i = -1, bytes = [];
-  if (!h || !data.daily) throw new Error('Missing forecast');
-  for (var j = 0; j < h.time.length; j++) {
-    if (h.time[j] <= now && now < h.time[j] + 3600) i = j;
+  if (!data || typeof data !== 'object') throw new Error('Invalid forecast response');
+  var h = data.hourly || {}, daily = data.daily || {}, payload = {};
+  var times = Array.isArray(h.time) ? h.time : [], i = -1;
+  for (var j = 0; j < times.length; j++) {
+    if (number(times[j]) && times[j] <= now && now < times[j] + 3600) i = j;
   }
-  if (i < 0 || i + 24 > h.time.length) throw new Error('Incomplete forecast horizon');
-  for (j = i; j < i + 24; j++) {
-    if (h.time[j] !== h.time[i] + (j-i)*3600 || !number(h.temperature_2m[j]) ||
-        !number(h.weather_code[j]) || (h.is_day[j] !== 0 && h.is_day[j] !== 1)) {
-      throw new Error('Invalid hourly sample');
+  if (i >= 0) {
+    var bytes = [], usable = false;
+    for (j = 0; j < 24; j++) {
+      var index = i + j, t = sample(h.temperature_2m, index);
+      var valid = times[index] === times[i] + j * 3600 && temperature(t);
+      var code = sample(h.weather_code, index), day = sample(h.is_day, index);
+      bytes.push(valid ? Math.round(t) + 100 : 255,
+        number(code) && (day === 0 || day === 1) ? icon(code, day) : 7);
+      usable = usable || valid;
     }
-    var t = Math.round(h.temperature_2m[j]);
-    if (t < -100 || t > 100) throw new Error('Temperature out of range');
-    bytes.push(t + 100, icon(h.weather_code[j], h.is_day[j]));
+    if (usable) {
+      payload.FORECAST_START = times[i];
+      payload.FORECAST_DATA = bytes;
+    }
+    var rain = sample(h.precipitation_probability, i);
+    if (number(rain) && rain >= 0 && rain <= 100) payload.WEATHER_PRECIP = Math.round(rain);
   }
-  var lo = data.daily.temperature_2m_min[0], hi = data.daily.temperature_2m_max[0];
-  var rain = h.precipitation_probability[i];
-  if (!number(lo) || !number(hi) || !number(rain)) throw new Error('Invalid daily sample');
-  return {FORECAST_START:h.time[i], FORECAST_DATA:bytes,
-    WEATHER_TEMP_MIN:Math.round(lo), WEATHER_TEMP_MAX:Math.round(hi), WEATHER_PRECIP:Math.round(rain)};
+  var lo = sample(daily.temperature_2m_min, 0), hi = sample(daily.temperature_2m_max, 0);
+  if (temperature(lo) && temperature(hi) && lo <= hi) {
+    payload.WEATHER_TEMP_MIN = Math.round(lo);
+    payload.WEATHER_TEMP_MAX = Math.round(hi);
+  }
+  if (!Object.keys(payload).length) throw new Error('No usable weather');
+  return payload;
 }
 module.exports = {parse:parse, icon:icon};

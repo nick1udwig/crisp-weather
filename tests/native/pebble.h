@@ -5,12 +5,15 @@
 #include <time.h>
 #define MESSAGE_KEY_FORECAST_START 1
 #define MESSAGE_KEY_FORECAST_DATA 2
+#define MESSAGE_KEY_WEATHER_TEMP_MIN 3
+#define MESSAGE_KEY_WEATHER_TEMP_MAX 4
+#define MESSAGE_KEY_WEATHER_PRECIP 5
 #define TUPLE_INT 1
 #define TUPLE_UINT 2
 #define TUPLE_BYTE_ARRAY 3
-typedef union { int32_t int32; uint8_t data[48]; } Value;
+typedef union { int8_t int8; uint8_t uint8; int16_t int16; uint16_t uint16; int32_t int32; uint32_t uint32; uint8_t data[48]; } Value;
 typedef struct { int type; int length; Value *value; } Tuple;
-typedef struct { Tuple start, data; } DictionaryIterator;
+typedef struct { Tuple start, data, low, high, rain; } DictionaryIterator;
 Tuple *dict_find(DictionaryIterator *, int);
 int persist_read_data(int, void *, size_t);
 int persist_write_data(int, const void *, size_t);
