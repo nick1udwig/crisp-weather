@@ -230,6 +230,6 @@ module.exports = [
   {
     // Shown under the Save button. Keep in sync with "version" in package.json.
     "type": "text",
-    "defaultValue": "Crisp Weather v0.1.0"
+    "defaultValue": "Crisp Weather v0.2.0"
   }
 ];
