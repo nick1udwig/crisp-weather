@@ -66,6 +66,8 @@ The native tests need a C compiler and Python 3.
 The bundle check uses the built JavaScript, real Clay settings, and simulated phone services.
 
 For a reproducible emulator preview, run `python scripts/preview.py emery dark` (or `light`) in the Python environment containing `pebble-tool`.
-The script sets the emulator clock and supplies fixture weather data.
+The script installs a preview bundle with phone requests disabled, sets the emulator clock, and supplies fixture weather data.
+Run `python scripts/preview.py --all` to update both themes on all platforms.
+Use `--partial --output /tmp/crisp-partial.png` to inspect missing forecast data.
 
 See [UPSTREAM.md](UPSTREAM.md) for source attribution and the imported revision.
