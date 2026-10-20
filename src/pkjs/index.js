@@ -14,65 +14,19 @@ var clayConfig = require('./config');
 var customClay = require('./custom-clay');
 var clay = new Clay(clayConfig, customClay);
 
-// --- Weather tunables -----------------------------------------------------
-var WEATHER_REFRESH_MS = 30 * 60 * 1000;  // re-fetch every 30 minutes
-var GEO_TIMEOUT_MS = 15000;
-var GEO_MAX_AGE_MS = 10 * 60 * 1000;      // accept a cached fix up to 10 min old
-var WEATHER_BASE_URL = 'https://api.open-meteo.com/v1/forecast';
-
-var forecast = require('./forecast');
-var weatherCache = require('./weather-cache').create(localStorage);
-function parseWeather(body) {
-  var payload = forecast.parse(JSON.parse(body), Math.floor(Date.now() / 1000));
-  weatherCache.put(payload);
-  sendWeather(weatherCache.get(Math.floor(Date.now() / 1000)));
-}
-
-function sendWeather(payload) {
-  if (!payload) return;
-  Pebble.sendAppMessage(payload, function() {}, function(e) {
-    console.log('Weather send failed: ' + JSON.stringify(e));
-  });
-}
-
-function requestWeather(lat, lon) {
-  var url = WEATHER_BASE_URL +
-    '?latitude=' + lat +
-    '&longitude=' + lon +
-    '&current=temperature_2m' +
-    '&hourly=precipitation_probability,temperature_2m,weather_code,is_day' +
-    '&daily=temperature_2m_max,temperature_2m_min' +
-    '&timezone=auto&timeformat=unixtime&forecast_days=2';
-
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', url);
-  xhr.timeout = 20000;
-  xhr.onload = function() {
-    if (xhr.status !== 200) { console.log("Weather HTTP " + xhr.status); return; }
-    try {
-      parseWeather(xhr.responseText);
-    } catch (e) {
-      console.log('Weather parse error: ' + e);
-    }
-  };
-  xhr.ontimeout = function() { console.log("Weather request timed out"); };
-  xhr.onerror = function() { console.log('Weather request failed'); };
-  xhr.send();
-}
-
-function fetchWeather() {
-  navigator.geolocation.getCurrentPosition(
-    function(pos) { requestWeather(pos.coords.latitude, pos.coords.longitude); },
-    function(err) { console.log('Geolocation error: ' + err.message); },
-    { timeout: GEO_TIMEOUT_MS, maximumAge: GEO_MAX_AGE_MS }
-  );
-}
-
+var weather = require('./weather-service').create({
+  storage:localStorage,
+  now:function() { return Date.now(); },
+  setTimeout:setTimeout,
+  clearTimeout:clearTimeout,
+  geolocation:navigator.geolocation,
+  XMLHttpRequest:XMLHttpRequest,
+  send:function(payload, success, failure) { Pebble.sendAppMessage(payload, success, failure); },
+  log:function(message) { console.log(message); }
+});
 Pebble.addEventListener('ready', function() {
   console.log('Crisp PebbleKit JS ready');
-  sendWeather(weatherCache.get(Math.floor(Date.now() / 1000)));
-  fetchWeather();
-  setInterval(fetchWeather, WEATHER_REFRESH_MS);
+  weather.start();
 });
 
 // Diagnostic: log what the config page actually produced on close (visible in
