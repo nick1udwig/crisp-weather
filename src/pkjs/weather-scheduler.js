@@ -50,12 +50,14 @@ function create(storage, now, random) {
     persist();
   }
   function success() {
+    state.reason = 'success';
     state.lastSuccess = now();
     state.failures = 0;
     state.rateFailures = 0;
     defer(30 * MINUTE);
   }
   function failure(kind, retryAfter) {
+    state.reason = kind;
     var delay = 30 * MINUTE;
     if (kind === 'transient' || kind === 'location') {
       state.failures = Math.min((state.failures || 0) + 1, 4);
@@ -66,8 +68,14 @@ function create(storage, now, random) {
     }
     defer(delay + Math.floor(delay * 0.1 * random()));
   }
+  function locationChanged() {
+    if (state.reason !== 'location' && state.reason !== 'permission' && state.reason !== 'success') return;
+    normalize();
+    state.next = 0;
+    persist();
+  }
   function status() { return {next:now()+wait(), lastSuccess:state.lastSuccess || 0, attempts:state.attempts.length}; }
   if (corrupt) persist();
-  return {wait:wait, reserve:reserve, defer:defer, success:success, failure:failure, status:status};
+  return {wait:wait, reserve:reserve, defer:defer, success:success, failure:failure, locationChanged:locationChanged, status:status};
 }
 module.exports = {create:create};

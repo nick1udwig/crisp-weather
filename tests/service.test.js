@@ -117,3 +117,19 @@ test('missing delivery callbacks have bounded retries without extra HTTP request
   f.advance(120000);assert.equal(f.sent.length,4);assert.equal(f.requests.length,1);
   service.check();assert.equal(f.sent.length,4);
 });
+test('manual coordinates recover immediately from denied location but preserve HTTP cooldowns',()=>{
+  const f=runtime(), service=create(f.env);service.start();
+  f.locations[0].failure({code:1,message:'Denied'});
+  service.configure({WEATHER_LOCATION_MODE:'1',WEATHER_LATITUDE:'20',WEATHER_LONGITUDE:'30'});
+  assert.equal(f.requests.length,1);
+  f.respond(429);
+  service.configure({WEATHER_LOCATION_MODE:'1',WEATHER_LATITUDE:'21',WEATHER_LONGITUDE:'31'});
+  f.advance(3599999);assert.equal(f.requests.length,1);
+  f.advance(1);assert.equal(f.requests.length,2);
+});
+test('changing a successful location still observes the minimum HTTP request interval',()=>{
+  const f=runtime(), service=create(f.env);service.start();f.locate();f.respond();
+  service.configure({WEATHER_LOCATION_MODE:'1',WEATHER_LATITUDE:'20',WEATHER_LONGITUDE:'30'});
+  assert.equal(f.requests.length,1);f.advance(59999);assert.equal(f.requests.length,1);
+  f.advance(1);assert.equal(f.requests.length,2);
+});

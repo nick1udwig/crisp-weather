@@ -150,6 +150,7 @@ function create(env) {
     location.mode = mode; location.latitude = latitude; location.longitude = longitude;
     saveLocation();
     if (changed) {
+      scheduler.locationChanged();
       generation++; busy = false;
       if (watchdog !== null) env.clearTimeout(watchdog);
       if (activeXHR) { try { activeXHR.abort(); } catch (e) {} activeXHR = null; }
