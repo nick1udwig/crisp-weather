@@ -20,7 +20,11 @@ function create(env) {
   function saveLocation() {
     try { env.storage.setItem(LOCATION_KEY, JSON.stringify(location)); } catch (e) {}
   }
-  function record(message) { location.message = message; saveLocation(); env.log(message); }
+  function record(message) {
+    location.message = message; saveLocation();
+    var next = scheduler.status();
+    env.log(message + '; lastSuccess=' + next.lastSuccess + '; nextAllowed=' + next.next);
+  }
   function schedule() {
     if (timer !== null) env.clearTimeout(timer);
     timer = env.setTimeout(check, Math.max(1000, Math.min(86400000, scheduler.wait())));
@@ -74,6 +78,8 @@ function create(env) {
       if (!current() || stage !== 'location') return;
       if (!coordinates(pos)) { finish('location','Location unavailable: invalid coordinates'); return; }
       stage = 'http';
+      location.source = location.mode === '1' ? 'Manual coordinates' : saved ? 'Saved phone location' : 'Phone location';
+      saveLocation();
       if (watchdog !== null) env.clearTimeout(watchdog);
       if (!saved) { location.fix = {coords:{latitude:Number(pos.coords.latitude),longitude:Number(pos.coords.longitude)},at:env.now()}; saveLocation(); }
       if (!scheduler.reserve()) { finish('storage','Weather request blocked by request budget or storage'); return; }
@@ -151,7 +157,17 @@ function create(env) {
     }
     check();
   }
-  function status() { return {message:location.message || 'Waiting for weather', schedule:scheduler.status()}; }
-  return {start:check, check:check, reconnect:reconnect, configure:configure, status:status};
+  function status() {
+    return {message:location.message || 'Waiting for weather',schedule:scheduler.status(),
+      cache:cache.status(Math.floor(env.now()/1000)),source:location.source || 'Phone location'};
+  }
+  function diagnostics() {
+    var s = status();
+    return s.message + '\nLocation: ' + s.source +
+      '\nLast success: ' + (s.schedule.lastSuccess ? new Date(s.schedule.lastSuccess).toISOString() : 'Never') +
+      '\nForecast age: ' + (s.cache.age === null ? 'Unavailable' : Math.floor(s.cache.age/60) + ' minutes') +
+      '\nNext allowed request: ' + new Date(s.schedule.next).toISOString();
+  }
+  return {start:check,check:check,reconnect:reconnect,configure:configure,status:status,diagnostics:diagnostics};
 }
 module.exports = {create:create};

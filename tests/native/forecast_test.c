@@ -15,6 +15,8 @@ int main(void) {
   DictionaryIterator d={.start={TUPLE_INT,4,&start},.data={TUPLE_BYTE_ARRAY,48,&data},.fetched={TUPLE_INT,4,&fetched}};
   assert(forecast_receive(&d));
   assert(forecast_get(100000,0,&t,&k) && t==-10 && k==0);
+  assert(!forecast_needs_refresh(101799));
+  assert(forecast_needs_refresh(101800));
   assert(forecast_get(103600,0,&t,&k) && t==-9 && k==1);
   assert(forecast_get(103600,11,&t,&k) && t==2 && k==5);
   assert(!forecast_get(99999,0,&t,&k));

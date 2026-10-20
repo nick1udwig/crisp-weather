@@ -1,4 +1,5 @@
 var Clay = require('@rebble/clay');
+var messageKeys = require('message_keys');
 var clay = new Clay(require('./config'),require('./custom-clay'),{autoHandleEvents:false});
 var weather = require('./weather-service').create({
   storage:localStorage,
@@ -15,8 +16,15 @@ Pebble.addEventListener('ready',function() {
   console.log('Crisp PebbleKit JS ready');
   weather.start();
 });
+Pebble.addEventListener('appmessage',function(e) {
+  if (!e || !e.payload) return;
+  var request = e.payload.WEATHER_REQUEST;
+  if (request === undefined) request = e.payload[messageKeys.WEATHER_REQUEST];
+  if (request === undefined) return;
+  if (request) weather.reconnect(); else weather.check();
+});
 Pebble.addEventListener('showConfiguration',function() {
-  clay.meta.userData.weatherStatus = weather.status().message;
+  clay.meta.userData.weatherStatus = weather.diagnostics();
   Pebble.openURL(clay.generateUrl());
 });
 Pebble.addEventListener('webviewclosed',function(e) {

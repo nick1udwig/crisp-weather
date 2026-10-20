@@ -1,6 +1,7 @@
 #include "main_window.h"
 #include "forecast.h"
 #include "weather.h"
+#include "weather_request.h"
 #include "dial.h"
 
 static Window *s_main_window;
@@ -148,6 +149,7 @@ static void update_time(struct tm *now) {
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits changed) {
+  weather_request_check(false);
   if (forecast_available() != s_forecast_available) apply_unobstructed();
   update_time(tick_time);
   corners_update();
@@ -732,6 +734,7 @@ static void bt_handler(bool connected) {
     vibes_long_pulse();
   }
 
+  if (connected && !s_connected) weather_request_check(true);
   s_connected = connected;
   corners_update();
   layer_mark_dirty(s_canvas_layer);

@@ -24,6 +24,9 @@ bool forecast_receive(DictionaryIterator *iter) {
   persist_write_data(FORECAST_PERSIST, &s_forecast, sizeof(s_forecast));
   return true;
 }
+bool forecast_needs_refresh(time_t now) {
+  return !s_forecast.fetched || now < s_forecast.fetched - 300 || now - s_forecast.fetched >= 1800;
+}
 bool forecast_get(time_t now, int ahead, int *temp, int *icon) {
   // A replay retains the original fetch time.
   if (!s_forecast.start || now < s_forecast.start || now < s_forecast.fetched - 300 || now - s_forecast.fetched >= 3*3600) return false;

@@ -10,7 +10,7 @@ test('settings retain manual location on the phone and send only watch settings'
     static prepareSettingsForAppMessage(settings){return Object.fromEntries(Object.entries(settings).map(([key,v])=>[key,v.value]));}
   }
   vm.runInNewContext(fs.readFileSync('src/pkjs/index.js','utf8'),{
-    require:name=>name==='@rebble/clay'?Clay:require('../src/pkjs/'+name.slice(2)),
+    require:name=>name==='@rebble/clay'?Clay:name==='message_keys'?{WEATHER_REQUEST:10034}:require('../src/pkjs/'+name.slice(2)),
     localStorage:f.env.storage,Date:{now:f.env.now},Math:{random:()=>0},
     setTimeout:f.env.setTimeout,clearTimeout:f.env.clearTimeout,
     navigator:{geolocation:f.env.geolocation},XMLHttpRequest:f.env.XMLHttpRequest,

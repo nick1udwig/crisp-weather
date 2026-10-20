@@ -38,6 +38,10 @@ function create(storage) {
     state = {};
     try { storage.setItem(KEY, '{}'); } catch (e) {}
   }
-  return {put:put, get:get, clear:clear};
+  function status(now) {
+    return {age:state.dial && numeric(state.dial.WEATHER_FETCHED_AT) ? now-state.dial.WEATHER_FETCHED_AT : null,
+      available:!!get(now)};
+  }
+  return {put:put, get:get, clear:clear, status:status};
 }
 module.exports = {create:create};

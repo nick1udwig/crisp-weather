@@ -168,7 +168,7 @@ module.exports = function() {
     if (status && meta && meta.userData && meta.userData.weatherStatus) {
       status.set(meta.userData.weatherStatus.replace(/[&<>"']/g, function(c) {
         return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-      }));
+      }).replace(/\n/g, '<br>'));
     }
 
     var themeItem = clayConfig.getItemByMessageKey('THEME');

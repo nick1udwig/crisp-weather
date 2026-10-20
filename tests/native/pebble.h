@@ -11,6 +11,7 @@
 #define MESSAGE_KEY_WEATHER_FETCHED_AT 6
 #define MESSAGE_KEY_WEATHER_DAILY_UNTIL 7
 #define MESSAGE_KEY_WEATHER_RAIN_UNTIL 8
+#define MESSAGE_KEY_WEATHER_REQUEST 9
 #define TUPLE_INT 1
 #define TUPLE_UINT 2
 #define TUPLE_BYTE_ARRAY 3
@@ -26,3 +27,14 @@ bool persist_read_bool(int);
 int32_t persist_read_int(int);
 int persist_write_bool(int, bool);
 int persist_write_int(int, int32_t);
+
+typedef int AppMessageResult;
+#define APP_MSG_OK 0
+#define APP_LOG_LEVEL_WARNING 1
+#define APP_LOG(...) ((void)0)
+void app_message_register_outbox_sent(void (*)(DictionaryIterator *, void *));
+void app_message_register_outbox_failed(void (*)(DictionaryIterator *, AppMessageResult, void *));
+bool connection_service_peek_pebble_app_connection(void);
+AppMessageResult app_message_outbox_begin(DictionaryIterator **);
+AppMessageResult app_message_outbox_send(void);
+int dict_write_uint8(DictionaryIterator *, uint32_t, uint8_t);

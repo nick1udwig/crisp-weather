@@ -1,6 +1,7 @@
 #include "comm.h"
 #include "forecast.h"
 #include "weather.h"
+#include "weather_request.h"
 #include "main_window.h"
 #include <stdlib.h>  // atoi
 
@@ -108,4 +109,5 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
 void comm_init() {
   app_message_register_inbox_received(in_recv_handler);
   app_message_open(APP_MESSAGE_INBOX_SIZE, APP_MESSAGE_OUTBOX_SIZE);
+  weather_request_init();
 }

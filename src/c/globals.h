@@ -78,7 +78,7 @@
 #define PERSIST_DEFAULTS_SET 3489
 
 // AppMessage buffers. The config payload is 19 keys (5 toggles + 8 colors + 4
-// corners + temp unit + theme), ~200 bytes; we never send anything back.
+// corners + temp unit + theme), ~200 bytes. Weather checks use one outbound key.
 // Requesting fixed, sized buffers
 // instead of app_message_*_size_maximum() keeps the app within aplite's small
 // RAM budget (the maximum-size request hangs the app there).

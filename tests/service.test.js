@@ -79,3 +79,11 @@ test('malformed JSON and HTTP 400 do not trigger fast retries',()=>{
     f.advance(1);assert.equal(f.locations.length,2);
   }
 });
+test('watch check resumes weather after phone timers have been suspended',()=>{
+  const f=runtime(), service=create(f.env);service.start();f.locate();f.respond();
+  f.timers.clear();f.advance(31*60000);service.check();
+  assert.equal(f.locations.length,2);f.locate();assert.equal(f.requests.length,2);
+  assert.match(service.diagnostics(),/Last success:/);
+  assert.match(service.diagnostics(),/Forecast age: 31 minutes/);
+  assert.match(service.diagnostics(),/Next allowed request:/);
+});
