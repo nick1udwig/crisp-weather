@@ -772,13 +772,6 @@ static void relayout(GRect visible) {
   layer_set_frame(text_layer_get_layer(s_month_layer),
                   GRect(block_x, day_y + day_h, block_w, label_h));
 
-#ifdef PBL_ROUND
-  // The forecast occupies the former round-screen corner positions. Keep the
-  // day on the right and use compact interior readouts on these displays.
-  layer_set_hidden(text_layer_get_layer(s_weekday_layer), s_forecast_available);
-  layer_set_hidden(text_layer_get_layer(s_month_layer), s_forecast_available);
-#endif
-
   // Corner readouts sit in the true panel corners on rectangular displays
   // (emery / Time 2 included). A physically round display has no corners, so
   // there the boxes are pulled in just enough to clear the bezel — the literal
@@ -800,7 +793,8 @@ static void relayout(GRect visible) {
 #ifdef PBL_ROUND
   if (s_forecast_available) for (int i = 0; i < NUM_CORNERS; i++) {
     int x = s_layout.center.x + scaled((i == CORNER_POS_TL || i == CORNER_POS_BL) ? -32 : 2);
-    int y = s_layout.center.y + scaled(i < 2 ? -28 : 18);
+    int gap = scaled(2);
+    int y = i < 2 ? day_y - label_h - 18 - gap : day_y + day_h + label_h + gap;
     s_corner_rect[i] = GRect(x,y,scaled(32),18);
   }
 #endif
