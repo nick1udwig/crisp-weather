@@ -33,7 +33,7 @@ def send(platform, fields, raw=None):
     run(platform, *args)
 
 
-def capture(platform, theme, partial, output):
+def capture(platform, theme, partial, output, plugins=False):
     light = theme == "light"
     settings = {
         "DATE": 1, "DAY": 1, "SECOND_HAND": 0, "HR_INDICATOR": 1, "BT": 1, "BT_VIBRATE": 1,
@@ -59,6 +59,11 @@ def capture(platform, theme, partial, output):
                     "WEATHER_TEMP_MIN": 13, "WEATHER_TEMP_MAX": 23,
                     "WEATHER_DAILY_UNTIL": (NOW // 86400 + 1) * 86400,
                     "WEATHER_PRECIP": 40, "WEATHER_RAIN_UNTIL": START + 3600}, raw)
+    if plugins:
+        send(platform, {"CORNER_TL": 7, "CORNER_TR": 7, "CORNER_BL": 7, "CORNER_BR": 7})
+        for slot, text in enumerate(["75%", "12.3k", "18:30", "72°F"]):
+            run(platform, "send-app-message", "--int", f"{KEYS['CORNER_SLOT']}={slot}",
+                f"{KEYS['CORNER_UNTIL']}={NOW + 300}", "--string", f"{KEYS['CORNER_TEXT']}={text}")
     destination = output or ROOT / "screenshots" / f"{platform}{'-light' if light else ''}.png"
     run(platform, "screenshot", "--no-open", str(destination))
     print(f"Captured {platform} {theme}: {destination}", flush=True)
@@ -71,6 +76,7 @@ def main():
     parser.add_argument("--all", action="store_true", help="Capture both themes on all platforms")
     parser.add_argument("--partial", action="store_true", help="Include a missing temperature and unknown conditions")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--plugins", action="store_true", help="Show fixture plugin corner readings")
     args = parser.parse_args()
     if args.all and (args.output or args.partial):
         parser.error("--all cannot be combined with --output or --partial")
@@ -84,7 +90,7 @@ def main():
             run(platform, "install", str(bundle))
             run(platform, "emu-battery", "--percent", "100")
             for theme in ["dark", "light"] if args.all else [args.theme]:
-                capture(platform, theme, args.partial, args.output)
+                capture(platform, theme, args.partial, args.output, args.plugins)
 
 
 if __name__ == "__main__":

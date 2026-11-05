@@ -4,11 +4,13 @@
 #include "main_window.h"
 #include "comm.h"
 #include "config.h"
+#include "complications.h"
 
 int main() {
   setlocale(LC_ALL, "");
   forecast_init();
   weather_init();
+  complications_init();
   comm_init();
   config_init();
 

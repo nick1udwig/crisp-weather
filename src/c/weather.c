@@ -4,7 +4,7 @@
 #define WEATHER_PERSIST 42
 static struct {
   int32_t low, high, rain;
-  int32_t daily_until, rain_until;
+  int32_t daily_until, rain_until, valid_until;
 } s_weather;
 
 static bool read_int(DictionaryIterator *iter, uint32_t key, int32_t *value) {
@@ -24,8 +24,14 @@ void weather_init(void) {
     memset(&s_weather, 0, sizeof(s_weather));
 }
 
+void weather_clear(void) {
+  memset(&s_weather, 0, sizeof(s_weather));
+  persist_write_data(WEATHER_PERSIST, &s_weather, sizeof(s_weather));
+}
 bool weather_receive(DictionaryIterator *iter) {
-  int32_t low, high, rain, until;
+  int32_t low, high, rain, until, valid_until = 0;
+  if (dict_find(iter,MESSAGE_KEY_WEATHER_VALID_UNTIL) &&
+      (!read_int(iter,MESSAGE_KEY_WEATHER_VALID_UNTIL,&valid_until) || valid_until <= 0)) return false;
   bool changed = false;
   if (read_int(iter, MESSAGE_KEY_WEATHER_TEMP_MIN, &low) &&
       read_int(iter, MESSAGE_KEY_WEATHER_TEMP_MAX, &high) &&
@@ -41,19 +47,22 @@ bool weather_receive(DictionaryIterator *iter) {
     s_weather.rain_until = until;
     changed = true;
   }
-  if (changed) persist_write_data(WEATHER_PERSIST, &s_weather, sizeof(s_weather));
+  if (changed) {
+    s_weather.valid_until = valid_until;
+    persist_write_data(WEATHER_PERSIST, &s_weather, sizeof(s_weather));
+  }
   return changed;
 }
 
 bool weather_daily(time_t now, int *low, int *high) {
-  if (!s_weather.daily_until || now < s_weather.daily_until - 86400 || now >= s_weather.daily_until) return false;
+  if ((s_weather.valid_until && now >= s_weather.valid_until) || !s_weather.daily_until || now < s_weather.daily_until - 86400 || now >= s_weather.daily_until) return false;
   *low = s_weather.low;
   *high = s_weather.high;
   return true;
 }
 
 bool weather_rain(time_t now, int *percent) {
-  if (!s_weather.rain_until || now < s_weather.rain_until - 3600 || now >= s_weather.rain_until) return false;
+  if ((s_weather.valid_until && now >= s_weather.valid_until) || !s_weather.rain_until || now < s_weather.rain_until - 3600 || now >= s_weather.rain_until) return false;
   *percent = s_weather.rain;
   return true;
 }

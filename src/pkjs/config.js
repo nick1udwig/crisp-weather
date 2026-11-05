@@ -13,7 +13,8 @@ var CORNER_OPTIONS = [
   { "label": "Heart rate", "value": "3" },
   { "label": "Steps", "value": "4" },
   { "label": "Weather (low/high)", "value": "5" },
-  { "label": "Rain chance", "value": "6" }
+  { "label": "Rain chance", "value": "6" },
+  { "label": "Follow Pebble complications", "value": "auto" }
 ];
 
 // Default content per corner, matching set_default_config on the watch.
@@ -102,12 +103,20 @@ module.exports = [
       },
       {
         "type": "text",
-        "defaultValue": "Pick what each screen corner shows. Weather and rain chance need the Pebble app connected and location access."
+        "defaultValue": "Watch readings work offline. Plugin readings use your preferred source in the Pebble app. Enable the plugins preview to select more readings."
       },
       cornerItem("CORNER_TL", "Top left", "1"),
+      {"type":"select","messageKey":"CORNER_TL_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_TL_PREVIEW","defaultValue":""},
       cornerItem("CORNER_TR", "Top right", "3"),
+      {"type":"select","messageKey":"CORNER_TR_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_TR_PREVIEW","defaultValue":""},
       cornerItem("CORNER_BL", "Bottom left", "4"),
+      {"type":"select","messageKey":"CORNER_BL_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_BL_PREVIEW","defaultValue":""},
       cornerItem("CORNER_BR", "Bottom right", "5"),
+      {"type":"select","messageKey":"CORNER_BR_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_BR_PREVIEW","defaultValue":""},
       {
         "type": "select",
         "messageKey": "TEMP_UNIT",
@@ -126,19 +135,10 @@ module.exports = [
     "type": "section",
     "items": [
       { "type": "heading", "defaultValue": "Weather location" },
+      { "type": "text", "defaultValue": "Weather comes from your preferred Pebble plugin. Manage locations and providers in the Pebble app." },
+      {"type":"select","messageKey":"WEATHER_PLUGIN_INSTANCE","label":"Pebble weather location","defaultValue":"", "options":[{"label":"First location","value":""}]},
       { "type": "text", "id": "weatherStatus", "defaultValue": "Waiting for weather" },
-      {
-        "type": "select", "messageKey": "WEATHER_LOCATION_MODE", "label": "Location source", "defaultValue": "0",
-        "options": [{"label":"Phone location","value":"0"},{"label":"Manual coordinates","value":"1"}]
-      },
-      {
-        "type": "input", "messageKey": "WEATHER_LATITUDE", "label": "Latitude", "defaultValue": "",
-        "description": "Manual location: -90 to 90. Use a decimal point.", "attributes": {"type":"text","maxlength":20}
-      },
-      {
-        "type": "input", "messageKey": "WEATHER_LONGITUDE", "label": "Longitude", "defaultValue": "",
-        "description": "Manual location: -180 to 180. West is negative.", "attributes": {"type":"text","maxlength":20}
-      }
+      { "type": "text", "id": "WEATHER_PLUGIN_INSTANCE_PREVIEW", "defaultValue": "" }
     ]
   },
   {
@@ -230,6 +230,6 @@ module.exports = [
   {
     // Shown under the Save button. Keep in sync with "version" in package.json.
     "type": "text",
-    "defaultValue": "Crisp Weather v0.2.0"
+    "defaultValue": "Crisp Weather v0.2.1"
   }
 ];

@@ -179,6 +179,61 @@ module.exports = function() {
       }).replace(/\n/g, '<br>'));
     }
 
+    ['CORNER_TL','CORNER_TR','CORNER_BL','CORNER_BR','WEATHER_PLUGIN_INSTANCE'].forEach(function(key) {
+      var weather = key === 'WEATHER_PLUGIN_INSTANCE';
+      var source = weather ? null : clayConfig.getItemByMessageKey(key);
+      var instance = clayConfig.getItemByMessageKey(weather ? key : key + '_INSTANCE');
+      var preview = clayConfig.getItemById(key + '_PREVIEW'), version = 0, drawHandler, retryTimer, retryDelay = 5000;
+      if ((!weather && !source) || !instance || !instance.$manipulatorTarget) return;
+      function escape(value) {
+        return String(value).replace(/[&<>"']/g,function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+      }
+      function show(message) { if (preview) preview.set(escape(message)); }
+      function update(reset, retrying) {
+        var selected = weather ? JSON.stringify({category:'weather',item:'location',property:'temperature'}) : source.get(), current = ++version;
+        clearTimeout(retryTimer);
+        if (!retrying) retryDelay = 5000;
+        function retry() {
+          retryTimer = setTimeout(function() { if (version === current) update(false,true); },retryDelay);
+          retryDelay = Math.min(30000,retryDelay*2);
+        }
+        if (drawHandler) { instance.off(drawHandler); drawHandler = null; }
+        if (reset) {
+          instance.$manipulatorTarget.set('innerHTML','<option value="">First instance</option>');
+          instance.set('');
+        }
+        var binding;
+        try { binding = JSON.parse(selected); } catch (error) {}
+        if (!binding || !binding.category) {
+          instance.hide(); show(selected === 'auto' ? 'Uses the next available preferred complication.' : ''); return;
+        }
+        instance.show(); if (!retrying) show('Loading plugin reading…');
+        if (typeof Pebble === 'undefined' || !Pebble.sendMessage) { show('Enable plugins in the Pebble app.'); return; }
+        Pebble.sendMessage('pkjs',{source:selected}).then(function(reply) {
+          if (version !== current) return;
+          if (reply.error) { show(reply.error); if (reply.retry) retry(); return; }
+          retryDelay = 5000;
+          var saved = instance.get(), rows = reply.instances || [], options = [{value:'',label:'First instance'}].concat(rows);
+          if (saved && !options.some(function(option) { return option.value === saved; })) options.push({value:saved,label:'Unavailable instance'});
+          instance.$manipulatorTarget.set('innerHTML',options.map(function(option) {
+            return '<option value="' + escape(option.value) + '">' + escape(option.label) + '</option>';
+          }).join(''));
+          instance.set(saved);
+          function draw() {
+            var chosen = instance.get(), row = chosen ? rows.filter(function(r) { return r.value === chosen; })[0] : rows[0];
+            show(reply.error || (row ? row.preview : 'No reading available'));
+          }
+          if (drawHandler) instance.off(drawHandler);
+          drawHandler = draw; instance.on('change',draw); draw();
+        }).catch(function() { if (version === current) { show('Plugin unavailable. Retrying…'); retry(); } });
+      }
+      if (source) source.on('change',function() { update(true); });
+      if (typeof Pebble !== 'undefined' && Pebble.addEventListener) Pebble.addEventListener('ready',function(e) {
+        if (e.target === 'pkjs') update(false);
+      });
+      update(false);
+    });
+
     var themeItem = clayConfig.getItemByMessageKey('THEME');
     if (!themeItem) {
       return;

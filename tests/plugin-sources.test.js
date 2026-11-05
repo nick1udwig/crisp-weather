@@ -1,0 +1,46 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const {create}=require('../src/pkjs/plugin-sources');
+test('shared subscriptions retry failed setup once and ignore callbacks from failed attempts',()=>{
+  const attempts=[], values=[], errors=[];let available=false, closed=0;
+  const hub=create({subscribeToSource(request){attempts.push(request);if(!available)throw new Error('Unavailable');return {unsubscribe(){closed++;}};}});
+  const binding={category:'weather',item:'location'};
+  const first=hub.subscribe(binding,value=>values.push(['first',value]),error=>errors.push(error));
+  const second=hub.subscribe(binding,value=>values.push(['second',value]),error=>errors.push(error));
+  assert.equal(attempts.length,2);assert.equal(errors.length,3);
+  available=true;first.retry();second.retry();assert.equal(attempts.length,3);
+  attempts[0].onData('old');attempts[1].onError({code:'TIMEOUT'});assert.deepEqual(values,[]);assert.equal(errors.length,3);
+  attempts[2].onData('fresh');assert.deepEqual(values,[['first','fresh'],['second','fresh']]);
+  first.unsubscribe();first.retry();assert.equal(closed,0);
+  second.unsubscribe();second.retry();assert.equal(closed,1);assert.equal(attempts.length,3);
+});
+test('discarded failed subscriptions do not restart on retry',()=>{
+  let calls=0;
+  const hub=create({subscribeToSource(){calls++;throw new Error('Unavailable');}});
+  const subscription=hub.subscribe({category:'test',item:'item'},()=>{},()=>{});
+  subscription.unsubscribe();subscription.retry();assert.equal(calls,1);
+});
+test('source cache replay retains receipt time while new updates get a new receipt time',()=>{
+  let now=1000,request;
+  const hub=create({subscribeToSource(r){request=r;return {unsubscribe(){}};}},()=>now);
+  const binding={category:'phone',item:'state'},received=[];
+  hub.subscribe(binding,(value,at)=>received.push(at),()=>{});
+  const envelope={instances:[]};request.onData(envelope);
+  now=5000;hub.subscribe(binding,(value,at)=>received.push(at),()=>{});
+  assert.deepEqual(received,[1000,1000]);
+  request.onData(envelope);assert.deepEqual(received,[1000,1000,5000,5000]);
+});
+test('new listeners receive an existing source error and recover on the same subscription',()=>{
+  let request,calls=0;
+  const hub=create({subscribeToSource(r){request=r;calls++;return {unsubscribe(){}};}});
+  const binding={category:'weather',item:'location'};
+  hub.subscribe(binding,()=>{},()=>{});
+  request.onData({instances:[]});request.onError({code:'PERMISSION_DENIED'});
+  const events=[];
+  const preview=hub.subscribe(binding,data=>events.push(data),error=>events.push(error.code));
+  assert.deepEqual(events,['PERMISSION_DENIED']);assert.equal(calls,1);
+  const envelope={instances:[{instanceId:'home'}]};request.onData(envelope);
+  assert.equal(events[1],envelope);preview.unsubscribe();
+  hub.subscribe(binding,data=>events.push(data),error=>events.push(error.code));
+  assert.equal(events.length,3);assert.equal(events[2],envelope);assert.equal(calls,1);
+});
