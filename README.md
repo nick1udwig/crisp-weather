@@ -83,6 +83,7 @@ The plugin picker lists text, number, and timestamp readings from installed plug
 It uses the preferred provider for each source in the Pebble app.
 Select an instance to keep a specific location or device, or use the first instance to follow the source order.
 The settings page previews the selected reading.
+If a source is slow or unavailable, the page retries and keeps the selected instance.
 Permissions for selected sources are handled by the Pebble app.
 
 Plugin text is limited to seven characters and 28 UTF-8 bytes.

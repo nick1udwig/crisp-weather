@@ -51,5 +51,24 @@ test('phone timers use the native receiver during delivery retries and preview t
   f.env.deliveryError=false;f.advance(1000);assert.equal(f.sent.length,2);
   const replies=[];
   events.configmessage({data:{source:JSON.stringify({category:'weather',item:'location',property:'temperature'})},respond:reply=>replies.push(reply)});
-  f.advance(8000);assert.equal(replies.length,1);assert.equal(replies[0].error,'Waiting for plugin data');
+  f.advance(8000);assert.equal(replies.length,1);assert.equal(replies[0].error,'Waiting for plugin data. Retrying…');assert.equal(replies[0].retry,true);
+});
+test('weather settings recover from a timeout when the shared source delivers later',()=>{
+  const f=runtime(),{events,requests}=launch(f),replies=[];
+  events.ready();
+  const query=()=>events.configmessage({data:{source:JSON.stringify({category:'weather',item:'location',property:'temperature'})},respond:reply=>replies.push(reply)});
+  query();f.advance(8000);assert.equal(replies[0].retry,true);
+  requests[0].onData({instances:[{instanceId:'home',properties:{name:{shortText:{text:'Home'}},temperature:{numericValue:{value:18,unit:'°C'}}}}]});
+  query();assert.equal(requests.length,1);assert.equal(replies.length,2);
+  assert.equal(replies[1].instances[0].value,'home');assert.equal(replies[1].instances[0].preview,'18°C');
+  f.advance(8000);assert.equal(replies.length,2);
+});
+test('weather settings show an earlier permission error and recover when permission is granted',()=>{
+  const f=runtime(),{events,requests}=launch(f),replies=[];
+  events.ready();requests[0].onError({code:'PERMISSION_DENIED'});
+  const query=()=>events.configmessage({data:{source:JSON.stringify({category:'weather',item:'location',property:'temperature'})},respond:reply=>replies.push(reply)});
+  query();assert.equal(replies[0].error,'Allow Location for Crisp Weather in the Pebble app.');
+  assert.equal(replies[0].retry,true);f.advance(8000);assert.equal(replies.length,1);
+  requests[0].onData({instances:[{instanceId:'home',properties:{temperature:{numericValue:{value:20,unit:'°C'}}}}]});
+  query();assert.equal(requests.length,1);assert.equal(replies[1].instances[0].preview,'20°C');
 });

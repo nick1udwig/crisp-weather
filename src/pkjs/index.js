@@ -78,7 +78,7 @@ Pebble.addEventListener('configmessage',function(e) {
   var binding = e.data && sources.parse(e.data.source);
   if (!binding) { e.respond({error:'Invalid source'}); return; }
   var subscription, done = false;
-  var timer = setTimeout(function() { finish({error:'Waiting for plugin data'}); },8000);
+  var timer = setTimeout(function() { finish({error:'Waiting for plugin data. Retrying…',retry:true}); },8000);
   function finish(reply) {
     if (done) return;
     done = true; clearTimeout(timer);
@@ -90,6 +90,15 @@ Pebble.addEventListener('configmessage',function(e) {
       var p = instance.properties || {};
       return {value:instance.instanceId,label:sources.text(p.name) || instance.instanceId,preview:sources.format(p[binding.property])};
     })});
-  },function(error) { finish({error:error && error.code || 'Plugins unavailable'}); });
+  },function(error) {
+    var code = error && error.code || 'PLUGIN_UNAVAILABLE';
+    var message = code;
+    if (code === 'PERMISSION_DENIED') message = binding.category === 'weather' ?
+      'Allow Location for Crisp Weather in the Pebble app.' : 'Allow this source for Crisp Weather in the Pebble app.';
+    else if (code === 'PLUGIN_UNAVAILABLE') message = 'Enable plugins and select a source in the Pebble app.';
+    else if (code === 'TIMEOUT') message = 'The plugin did not respond. Retrying…';
+    else if (code === 'RATE_LIMITED') message = 'The plugin is busy. Retrying…';
+    finish({error:message,retry:code !== 'INVALID_REQUEST'});
+  });
   if (done) subscription.unsubscribe();
 });

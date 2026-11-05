@@ -30,3 +30,17 @@ test('source cache replay retains receipt time while new updates get a new recei
   assert.deepEqual(received,[1000,1000]);
   request.onData(envelope);assert.deepEqual(received,[1000,1000,5000,5000]);
 });
+test('new listeners receive an existing source error and recover on the same subscription',()=>{
+  let request,calls=0;
+  const hub=create({subscribeToSource(r){request=r;calls++;return {unsubscribe(){}};}});
+  const binding={category:'weather',item:'location'};
+  hub.subscribe(binding,()=>{},()=>{});
+  request.onData({instances:[]});request.onError({code:'PERMISSION_DENIED'});
+  const events=[];
+  const preview=hub.subscribe(binding,data=>events.push(data),error=>events.push(error.code));
+  assert.deepEqual(events,['PERMISSION_DENIED']);assert.equal(calls,1);
+  const envelope={instances:[{instanceId:'home'}]};request.onData(envelope);
+  assert.equal(events[1],envelope);preview.unsubscribe();
+  hub.subscribe(binding,data=>events.push(data),error=>events.push(error.code));
+  assert.equal(events.length,3);assert.equal(events[2],envelope);assert.equal(calls,1);
+});
