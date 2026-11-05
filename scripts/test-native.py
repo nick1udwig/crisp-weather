@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CASES = {
+    "complications": ["complications"],
     "forecast": ["forecast"],
     "weather": ["weather"],
     "request": ["weather_request"],

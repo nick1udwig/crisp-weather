@@ -65,7 +65,10 @@
       "WEATHER_LOCATION_MODE",
       "WEATHER_LATITUDE",
       "WEATHER_LONGITUDE",
-      "WEATHER_REQUEST"
+      "WEATHER_REQUEST",
+      "CORNER_SLOT",
+      "CORNER_TEXT",
+      "CORNER_UNTIL"
     ],
     "resources": {
       "media": [
@@ -76,11 +79,23 @@
           "menuIcon": true
         }
       ]
-    }
+    },
+    "usesPermissions": [
+      "Location",
+      "Health",
+      {
+        "name": "Internet",
+        "parameters": {
+          "domains": [
+            "api.open-meteo.com"
+          ]
+        }
+      }
+    ]
   },
   "scripts": {
     "test": "node --test tests/*.test.js",
     "test:native": "python3 scripts/test-native.py",
-    "test:bundle": "node scripts/check-bundle.js"
+    "test:bundle": "node scripts/check-bundle.js && node scripts/check-plugin-bundle.js"
   }
 }

@@ -179,6 +179,46 @@ module.exports = function() {
       }).replace(/\n/g, '<br>'));
     }
 
+    ['CORNER_TL','CORNER_TR','CORNER_BL','CORNER_BR'].forEach(function(key) {
+      var source = clayConfig.getItemByMessageKey(key), instance = clayConfig.getItemByMessageKey(key + '_INSTANCE');
+      var preview = clayConfig.getItemById(key + '_PREVIEW'), version = 0, drawHandler;
+      if (!source || !instance || !instance.$manipulatorTarget) return;
+      function escape(value) {
+        return String(value).replace(/[&<>"']/g,function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+      }
+      function show(message) { if (preview) preview.set(escape(message)); }
+      function update(reset) {
+        var selected = source.get(), current = ++version, saved = reset ? '' : instance.get();
+        var binding;
+        try { binding = JSON.parse(selected); } catch (error) {}
+        if (!binding || !binding.category) {
+          instance.hide(); show(selected === 'auto' ? 'Uses the next available preferred complication.' : ''); return;
+        }
+        instance.show(); show('Loading plugin reading…');
+        if (typeof Pebble === 'undefined' || !Pebble.sendMessage) { show('Enable plugins in the Pebble app.'); return; }
+        Pebble.sendMessage('pkjs',{source:selected}).then(function(reply) {
+          if (version !== current) return;
+          var rows = reply.instances || [], options = [{value:'',label:'First instance'}].concat(rows);
+          if (saved && !options.some(function(option) { return option.value === saved; })) options.push({value:saved,label:'Unavailable instance'});
+          instance.$manipulatorTarget.set('innerHTML',options.map(function(option) {
+            return '<option value="' + escape(option.value) + '">' + escape(option.label) + '</option>';
+          }).join(''));
+          instance.set(saved);
+          function draw() {
+            var chosen = instance.get(), row = chosen ? rows.filter(function(r) { return r.value === chosen; })[0] : rows[0];
+            show(reply.error || (row ? row.preview : 'No reading available'));
+          }
+          if (drawHandler) instance.off(drawHandler);
+          drawHandler = draw; instance.on('change',draw); draw();
+        }).catch(function() { if (version === current) show('Plugin unavailable'); });
+      }
+      source.on('change',function() { update(true); });
+      if (typeof Pebble !== 'undefined' && Pebble.addEventListener) Pebble.addEventListener('ready',function(e) {
+        if (e.target === 'pkjs') update(false);
+      });
+      update(false);
+    });
+
     var themeItem = clayConfig.getItemByMessageKey('THEME');
     if (!themeItem) {
       return;

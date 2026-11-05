@@ -13,7 +13,8 @@ var CORNER_OPTIONS = [
   { "label": "Heart rate", "value": "3" },
   { "label": "Steps", "value": "4" },
   { "label": "Weather (low/high)", "value": "5" },
-  { "label": "Rain chance", "value": "6" }
+  { "label": "Rain chance", "value": "6" },
+  { "label": "Follow Pebble complications", "value": "auto" }
 ];
 
 // Default content per corner, matching set_default_config on the watch.
@@ -102,12 +103,20 @@ module.exports = [
       },
       {
         "type": "text",
-        "defaultValue": "Pick what each screen corner shows. Weather and rain chance need the Pebble app connected and location access."
+        "defaultValue": "Watch readings work offline. Plugin readings use your preferred source in the Pebble app. Enable the plugins preview to select more readings."
       },
       cornerItem("CORNER_TL", "Top left", "1"),
+      {"type":"select","messageKey":"CORNER_TL_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_TL_PREVIEW","defaultValue":""},
       cornerItem("CORNER_TR", "Top right", "3"),
+      {"type":"select","messageKey":"CORNER_TR_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_TR_PREVIEW","defaultValue":""},
       cornerItem("CORNER_BL", "Bottom left", "4"),
+      {"type":"select","messageKey":"CORNER_BL_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_BL_PREVIEW","defaultValue":""},
       cornerItem("CORNER_BR", "Bottom right", "5"),
+      {"type":"select","messageKey":"CORNER_BR_INSTANCE","label":"Instance","defaultValue":"","options":[{"label":"First instance","value":""}]},
+      {"type":"text","id":"CORNER_BR_PREVIEW","defaultValue":""},
       {
         "type": "select",
         "messageKey": "TEMP_UNIT",

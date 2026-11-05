@@ -1,4 +1,5 @@
 #include "comm.h"
+#include "complications.h"
 #include "forecast.h"
 #include "weather.h"
 #include "weather_request.h"
@@ -45,7 +46,9 @@ static bool store_select(DictionaryIterator *iter, uint32_t message_key, int per
 }
 
 static bool store_corner(DictionaryIterator *iter, uint32_t message_key, int corner_pos) {
-  return store_select(iter, message_key, PERSIST_KEY_CORNER_OFFSET + corner_pos);
+  bool changed = store_select(iter, message_key, PERSIST_KEY_CORNER_OFFSET + corner_pos);
+  if (changed) complications_clear(corner_pos);
+  return changed;
 }
 
 static void in_recv_handler(DictionaryIterator *iter, void *context) {
@@ -93,7 +96,8 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
   bool weather_changed = forecast_receive(iter);
   weather_changed |= weather_receive(iter);
 
-  if (!config_changed && !weather_changed) return;
+  bool corners_changed = complications_receive(iter);
+  if (!config_changed && !weather_changed && !corners_changed) return;
 
   bool complete_palette = dict_find(iter, MESSAGE_KEY_HOUR_MARKERS_COLOR) &&
     dict_find(iter, MESSAGE_KEY_MINUTE_MARKERS_COLOR) && dict_find(iter, MESSAGE_KEY_CHARGING_MARKERS_COLOR);

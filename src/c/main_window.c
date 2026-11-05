@@ -1,4 +1,5 @@
 #include "main_window.h"
+#include "complications.h"
 #include "forecast.h"
 #include "weather.h"
 #include "weather_request.h"
@@ -11,7 +12,7 @@ static Layer *s_canvas_layer, *s_bg_layer;
 // One small readout per screen corner (CORNER_POS_*), shown only when its
 // configured content kind is not CORNER_NONE.
 static TextLayer *s_corner_layer[NUM_CORNERS];
-static char s_corner_buffer[NUM_CORNERS][12];
+static char s_corner_buffer[NUM_CORNERS][COMPLICATION_TEXT_SIZE];
 
 static Time s_last_time, s_anim_time;
 static char s_weekday_buffer[8], s_month_buffer[8], s_day_in_month_buffer[3];
@@ -266,7 +267,8 @@ static void corners_update(void) {
   for(int i = 0; i < NUM_CORNERS; i++) {
     int kind = config_get_corner(i);
     if(kind == CORNER_NONE) continue;
-    format_corner(kind, s_corner_buffer[i], sizeof(s_corner_buffer[i]));
+    if (kind == CORNER_PLUGIN) snprintf(s_corner_buffer[i], sizeof(s_corner_buffer[i]), "%s", complications_text(i,time(NULL)));
+    else format_corner(kind, s_corner_buffer[i], sizeof(s_corner_buffer[i]));
     text_layer_set_text(s_corner_layer[i], s_corner_buffer[i]);
   }
 }
@@ -890,6 +892,7 @@ static void window_load(Window *window) {
   #endif
   for(int i = 0; i < NUM_CORNERS; i++) {
     s_corner_layer[i] = text_layer_create(bounds);
+    text_layer_set_overflow_mode(s_corner_layer[i], GTextOverflowModeTrailingEllipsis);
     GTextAlignment align = (i == CORNER_POS_TR || i == CORNER_POS_BR)
       ? GTextAlignmentRight : GTextAlignmentLeft;
     text_layer_set_text_alignment(s_corner_layer[i], align);

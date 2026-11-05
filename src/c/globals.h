@@ -138,6 +138,7 @@
 #define CORNER_HEART_RATE  3
 #define CORNER_STEPS       4
 #define CORNER_WEATHER     5   // current temperature (relayed by the phone)
+#define CORNER_PLUGIN      7
 #define CORNER_PRECIP      6   // current-hour precipitation probability
 
 // Corner positions, used both as the s_corners[] index and the persist slot

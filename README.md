@@ -74,3 +74,25 @@ Run `python scripts/preview.py --all` to update both themes on all platforms.
 Use `--partial --output /tmp/crisp-partial.png` to inspect missing forecast data.
 
 See [UPSTREAM.md](UPSTREAM.md) for source attribution and the imported revision.
+
+## Plugin preview
+
+This branch needs Pebble SDK 4.44 or later and pebble-tool 5.1.0 or later.
+Enable Settings → Plugins → Plugins / permissions preview in the Pebble mobile app.
+Plugins are not ready for general Appstore release.
+See the [Pebble plugin guide](https://developer.repebble.com/guides/plugins/preview/).
+
+Each corner can show a local watch reading, a plugin reading, or the next available reading from your preferred Pebble complications.
+The plugin picker lists text, number, and timestamp readings from installed plugins.
+It uses the preferred provider for each source in the Pebble app.
+Select an instance to keep a specific location or device, or use the first instance to follow the source order.
+The settings page previews the selected reading.
+Permissions for selected sources are handled by the Pebble app.
+
+Plugin text is limited to seven characters and 28 UTF-8 bytes.
+Long text can show an ellipsis in narrow layouts.
+Timestamps use the phone's local time in 24-hour format.
+Cached readings keep their original expiry; a reading with no expiry lasts five minutes, and no reading is retained for more than one day.
+Expired or missing readings show `--`.
+Watch battery, Bluetooth, steps, and heart rate remain local and work without the phone.
+Existing corner settings are preserved.
