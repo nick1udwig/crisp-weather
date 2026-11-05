@@ -42,10 +42,15 @@ function create(env, instanceId) {
       send();
     });
   }
+  function retrySubscription() {
+    if (stopped) return;
+    if (!subscription) start();
+    else if (subscription.retry) subscription.retry();
+  }
   return {
     start:start,
-    check:function() { if (!subscription) start(); else send(); },
-    reconnect:function() { send(true); if (!subscription) start(); },
+    check:function() { retrySubscription(); send(); },
+    reconnect:function() { retrySubscription(); send(true); },
     configure:function() {},
     stop:function() { stopped = true; if (subscription) subscription.unsubscribe(); },
     diagnostics:function() {

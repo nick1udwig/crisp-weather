@@ -40,3 +40,23 @@ test('cached payload is revalidated instead of trusting persisted wire values',(
   f.env.storage.setItem('crisp-plugin-weather-v1',JSON.stringify(cached));
   const resumed=create(f.env,'home');resumed.start();assert.equal(f.sent.at(-1).FORECAST_DATA.length,48);
 });
+for (const trigger of ['check','reconnect']) test(`weather retries a failed subscription on ${trigger} without restarting`,()=>{
+  const f=runtime(), attempts=[];
+  const sources=require('../src/pkjs/plugin-sources').create({subscribeToSource(request){
+    attempts.push(request);
+    if(attempts.length===1) throw new Error('Startup failure');
+    return {unsubscribe(){}};
+  }});
+  const service=create({...f.env,sources},'home');service.start();
+  assert.equal(attempts.length,1);
+  service[trigger]();assert.equal(attempts.length,2);
+  const start=Math.floor(f.env.now()/3600000)*3600;
+  attempts[1].onData({validUntilMs:f.env.now()+60000,instances:[{instanceId:'home',properties:{
+    hourly_temperature:{series:{start,stepSec:3600,numericValue:{values:[18],unit:'°C'}}}
+  }}]});
+  assert.equal(f.sent.at(-1).FORECAST_DATA[0],118);
+  attempts[0].onError({code:'PERMISSION_DENIED'});
+  service[trigger]();assert.equal(attempts.length,2);assert.equal(f.sent.at(-1).FORECAST_DATA[0],118);
+  attempts[1].onError({code:'TIMEOUT'});service[trigger]();assert.equal(attempts.length,2);
+  service.stop();service[trigger]();assert.equal(attempts.length,2);
+});

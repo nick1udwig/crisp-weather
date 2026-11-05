@@ -117,7 +117,12 @@ function create(env) {
     start:function() { rebuild(); updatePreferences(); },
     configure:configure,
     apply:function() { sent = []; rebuild(); updatePreferences(); },
-    refresh:function(force) { render(); if (force) KEYS.forEach(function(key,i) { push(i,true); }); },
+    refresh:function(force) {
+      if (preferenceSubscription && preferenceSubscription.retry) preferenceSubscription.retry();
+      subscriptions.slice().forEach(function(subscription) { if (subscription.retry) subscription.retry(); });
+      render();
+      if (force) KEYS.forEach(function(key,i) { push(i,true); });
+    },
     diagnostics:function() { return errors.filter(Boolean).join(', '); },
     choices:function() { return choices.slice(); }
   };

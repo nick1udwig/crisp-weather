@@ -64,35 +64,50 @@ function format(reading) {
 }
 function create(pebble) {
   var groups = {};
+  function connect(key, group) {
+    if (groups[key] !== group || group.subscription || group.connecting) return;
+    var attempt = ++group.attempt;
+    group.connecting = true;
+    try {
+      var subscription = pebble.subscribeToSource({category:group.category, item:group.item,
+        onData:function(envelope) {
+          if (groups[key] !== group || group.attempt !== attempt) return;
+          group.envelope = envelope;
+          group.listeners.slice().forEach(function(l) { l.data(envelope); });
+        },
+        onError:function(err) {
+          if (groups[key] !== group || group.attempt !== attempt) return;
+          if (err && err.code === 'PERMISSION_DENIED') group.envelope = null;
+          group.listeners.slice().forEach(function(l) { l.error(err); });
+        }});
+      if (groups[key] === group) group.subscription = subscription;
+      else if (subscription) subscription.unsubscribe();
+    } catch (err) {
+      group.attempt++;
+      group.listeners.slice().forEach(function(l) { l.error(err); });
+    } finally { group.connecting = false; }
+  }
   function subscribe(binding, data, error) {
     var key = JSON.stringify([binding.category, binding.item]), group = groups[key];
     var listener = {data:data, error:error};
-    if (!group) group = groups[key] = {listeners:[], subscription:null, envelope:null};
+    if (!group) group = groups[key] = {category:binding.category, item:binding.item,
+      listeners:[], subscription:null, envelope:null, connecting:false, attempt:0};
     group.listeners.push(listener);
     if (group.envelope) data(group.envelope);
-    if (!group.subscription) {
-      try {
-        group.subscription = pebble.subscribeToSource({category:binding.category, item:binding.item,
-          onData:function(envelope) {
-            if (groups[key] !== group) return;
-            group.envelope = envelope;
-            group.listeners.slice().forEach(function(l) { l.data(envelope); });
-          },
-          onError:function(err) {
-            if (groups[key] !== group) return;
-            if (err && err.code === 'PERMISSION_DENIED') group.envelope = null;
-            group.listeners.slice().forEach(function(l) { l.error(err); });
-          }});
-      } catch (err) { error(err); }
-    }
-    return {unsubscribe:function() {
-      group.listeners = group.listeners.filter(function(l) { return l !== listener; });
-      if (!group.listeners.length) {
-        delete groups[key];
-        if (group.subscription) group.subscription.unsubscribe();
+    connect(key,group);
+    return {
+      retry:function() { if (group.listeners.indexOf(listener) >= 0) connect(key,group); },
+      unsubscribe:function() {
+        if (group.listeners.indexOf(listener) < 0) return;
+        group.listeners = group.listeners.filter(function(l) { return l !== listener; });
+        if (!group.listeners.length) {
+          delete groups[key];
+          if (group.subscription) group.subscription.unsubscribe();
+        }
       }
-    }};
+    };
   }
   return {subscribe:subscribe};
 }
+
 module.exports = {create:create, catalogue:catalogue, parse:parse, text:text, format:format, compact:compact};

@@ -72,3 +72,14 @@ test('restart replays cached text without extending its expiry',()=>{
   const resumed=create({...f.env,sources:sources.create({subscribeToSource(){return {unsubscribe(){}};}})});
   resumed.start();assert.equal(f.sent.at(-1).CORNER_TEXT,'72%');assert.equal(f.sent.at(-1).CORNER_UNTIL,until);
 });
+test('corner refresh retries failed source setup without duplicating a recovered subscription',()=>{
+  const f=runtime(), attempts=[];
+  f.env.storage.setItem('clay-settings',JSON.stringify({CORNER_TL:binding}));
+  const hub=sources.create({subscribeToSource(request){
+    attempts.push(request);if(attempts.length===1)throw new Error('Unavailable');return {unsubscribe(){}};
+  }});
+  const corners=create({...f.env,sources:hub});corners.start();
+  assert.equal(attempts.length,1);corners.refresh(true);assert.equal(attempts.length,2);
+  attempts[1].onData({validUntilMs:f.env.now()+60000,instances:[{properties:{battery_level:{shortText:{text:'75%'}}}}]});
+  assert.equal(f.sent.at(-1).CORNER_TEXT,'75%');corners.refresh(true);assert.equal(attempts.length,2);
+});
