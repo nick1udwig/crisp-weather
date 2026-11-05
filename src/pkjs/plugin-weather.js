@@ -25,11 +25,12 @@ function create(env, instanceId) {
   function start() {
     if (subscription || stopped) return;
     send(true);
-    subscription = env.sources.subscribe({category:'weather',item:'location'},function(envelope) {
+    subscription = env.sources.subscribe({category:'weather',item:'location'},function(envelope,receivedAtMs) {
       if (stopped) return;
       var next = JSON.stringify(envelope);
-      if (signature !== next) {
-        var now = Math.floor(env.now()/1000);
+      var received = typeof receivedAtMs === 'number' && isFinite(receivedAtMs) ? Math.floor(receivedAtMs/1000) : null;
+      if (signature !== next || (received !== null && state && received > state.received)) {
+        var now = received === null ? Math.floor(env.now()/1000) : received;
         state = {instanceId:instanceId,signature:next,received:now,payload:forecast.parse(envelope,instanceId,now)};
         signature = next; save();
       }

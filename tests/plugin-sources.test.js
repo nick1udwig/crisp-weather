@@ -20,3 +20,13 @@ test('discarded failed subscriptions do not restart on retry',()=>{
   const subscription=hub.subscribe({category:'test',item:'item'},()=>{},()=>{});
   subscription.unsubscribe();subscription.retry();assert.equal(calls,1);
 });
+test('source cache replay retains receipt time while new updates get a new receipt time',()=>{
+  let now=1000,request;
+  const hub=create({subscribeToSource(r){request=r;return {unsubscribe(){}};}},()=>now);
+  const binding={category:'phone',item:'state'},received=[];
+  hub.subscribe(binding,(value,at)=>received.push(at),()=>{});
+  const envelope={instances:[]};request.onData(envelope);
+  now=5000;hub.subscribe(binding,(value,at)=>received.push(at),()=>{});
+  assert.deepEqual(received,[1000,1000]);
+  request.onData(envelope);assert.deepEqual(received,[1000,1000,5000,5000]);
+});

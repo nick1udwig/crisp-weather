@@ -62,7 +62,8 @@ function format(reading) {
   }
   return compact(value) || '--';
 }
-function create(pebble) {
+function create(pebble, now) {
+  now = now || function() { return Date.now(); };
   var groups = {};
   function connect(key, group) {
     if (groups[key] !== group || group.subscription || group.connecting) return;
@@ -73,7 +74,8 @@ function create(pebble) {
         onData:function(envelope) {
           if (groups[key] !== group || group.attempt !== attempt) return;
           group.envelope = envelope;
-          group.listeners.slice().forEach(function(l) { l.data(envelope); });
+          group.receivedAtMs = now();
+          group.listeners.slice().forEach(function(l) { l.data(envelope,group.receivedAtMs); });
         },
         onError:function(err) {
           if (groups[key] !== group || group.attempt !== attempt) return;
@@ -93,7 +95,7 @@ function create(pebble) {
     if (!group) group = groups[key] = {category:binding.category, item:binding.item,
       listeners:[], subscription:null, envelope:null, connecting:false, attempt:0};
     group.listeners.push(listener);
-    if (group.envelope) data(group.envelope);
+    if (group.envelope) data(group.envelope,group.receivedAtMs);
     connect(key,group);
     return {
       retry:function() { if (group.listeners.indexOf(listener) >= 0) connect(key,group); },

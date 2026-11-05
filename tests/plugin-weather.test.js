@@ -46,7 +46,7 @@ for (const trigger of ['check','reconnect']) test(`weather retries a failed subs
     attempts.push(request);
     if(attempts.length===1) throw new Error('Startup failure');
     return {unsubscribe(){}};
-  }});
+  }},f.env.now);
   const service=create({...f.env,sources},'home');service.start();
   assert.equal(attempts.length,1);
   service[trigger]();assert.equal(attempts.length,2);
@@ -59,4 +59,22 @@ for (const trigger of ['check','reconnect']) test(`weather retries a failed subs
   service[trigger]();assert.equal(attempts.length,2);assert.equal(f.sent.at(-1).FORECAST_DATA[0],118);
   attempts[1].onError({code:'TIMEOUT'});service[trigger]();assert.equal(attempts.length,2);
   service.stop();service[trigger]();assert.equal(attempts.length,2);
+});
+test('a weather subscriber cannot renew old shared data without a source update',()=>{
+  const f=runtime();let request;
+  const sources=require('../src/pkjs/plugin-sources').create({subscribeToSource(r){request=r;return {unsubscribe(){}};}},f.env.now);
+  sources.subscribe({category:'weather',item:'location'},()=>{},()=>{});
+  const received=Math.floor(f.env.now()/1000),start=Math.floor(received/3600)*3600;
+  const envelope={instances:[{instanceId:'home',properties:{
+    hourly_temperature:{series:{start,stepSec:3600,numericValue:{values:Array(24).fill(18),unit:'°C'}}}
+  }}]};
+  request.onData(envelope);f.advance(60000);
+  const service=create({...f.env,sources},'home');service.start();
+  assert.equal(f.sent.at(-1).WEATHER_FETCHED_AT,received);
+  assert.equal(f.sent.at(-1).WEATHER_VALID_UNTIL,received+1800);
+  f.advance(1800000);service.check();assert.deepEqual(f.sent.at(-1),{WEATHER_RESET:1});
+  service.stop();const resumed=create({...f.env,sources},'home');resumed.start();
+  assert.deepEqual(f.sent.at(-1),{WEATHER_RESET:1});
+  request.onData(envelope);assert.equal(f.sent.at(-1).WEATHER_FETCHED_AT,Math.floor(f.env.now()/1000));
+  assert.equal(f.sent.at(-1).WEATHER_VALID_UNTIL,Math.floor(f.env.now()/1000)+1800);
 });

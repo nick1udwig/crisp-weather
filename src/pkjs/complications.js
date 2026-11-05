@@ -65,14 +65,15 @@ function create(env) {
     });
     KEYS.forEach(function(key,i) { push(i); });
   }
-  function receive(binding, envelope) {
+  function receive(binding, envelope, receivedAtMs) {
+    var received = Math.floor((typeof receivedAtMs === 'number' && isFinite(receivedAtMs) ? receivedAtMs : env.now())/1000);
     var list = envelope && Array.isArray(envelope.instances) ? envelope.instances : [];
     var instance = binding.instanceId ? list.filter(function(item) { return item.instanceId === binding.instanceId; })[0] : list[binding.index || 0];
     var reading = instance && instance.properties && instance.properties[binding.property];
     var formatted = sources.format(reading);
     var expiry = envelope && envelope.validUntilMs;
-    var until = typeof expiry === 'number' && isFinite(expiry) ? Math.floor(expiry/1000) : Math.floor(env.now()/1000) + 300;
-    until = Math.min(until, Math.floor(env.now()/1000) + 86400, 2147483647);
+    var until = typeof expiry === 'number' && isFinite(expiry) ? Math.floor(expiry/1000) : received + 300;
+    until = Math.min(until, received + 86400, 2147483647);
     return formatted !== '--' && until > env.now()/1000 ? {text:formatted, until:until} : null;
   }
   function rebuild() {
@@ -85,9 +86,9 @@ function create(env) {
       var binding = sources.parse(choices[i]);
       if (!binding) return;
       binding.instanceId = instances[i];
-      subscriptions.push(env.sources.subscribe(binding, function(envelope) {
+      subscriptions.push(env.sources.subscribe(binding, function(envelope,receivedAtMs) {
         if (current !== generation) return;
-        readings[i] = receive(binding,envelope); remember(i); errors[i] = ''; push(i);
+        readings[i] = receive(binding,envelope,receivedAtMs); remember(i); errors[i] = ''; push(i);
       }, function(error) {
         if (current !== generation) return;
         errors[i] = error && error.code || 'PLUGIN_UNAVAILABLE';
@@ -96,9 +97,9 @@ function create(env) {
       }));
     });
     if (choices.indexOf('auto') >= 0) preferred.forEach(function(candidate) {
-      subscriptions.push(env.sources.subscribe(candidate.binding, function(envelope) {
+      subscriptions.push(env.sources.subscribe(candidate.binding, function(envelope,receivedAtMs) {
         if (current !== generation) return;
-        candidate.reading = receive(candidate.binding,envelope); savePreferred(); render();
+        candidate.reading = receive(candidate.binding,envelope,receivedAtMs); savePreferred(); render();
       }, function(error) {
         if (current !== generation) return;
         if (error && error.code === 'PERMISSION_DENIED') { candidate.reading = null; savePreferred(); }

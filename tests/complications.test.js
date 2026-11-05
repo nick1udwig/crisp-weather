@@ -8,7 +8,7 @@ function fixture(settings={CORNER_TL:binding}) {
   const f=runtime(), subscriptions=[];
   f.env.storage.setItem('clay-settings',JSON.stringify(settings));
   const pebble={subscribeToSource(request){const s={request,closed:false,unsubscribe(){this.closed=true;}};subscriptions.push(s);return s;}};
-  const hub=sources.create(pebble);
+  const hub=sources.create(pebble,f.env.now);
   const corners=create({...f.env,sources:hub});
   corners.start();
   const envelope=(value,expiry=f.env.now()+60000)=>({validUntilMs:expiry,instances:[{instanceId:'phone',properties:{battery_level:{numericValue:{value,unit:'%'}}}}]});
@@ -69,7 +69,7 @@ test('transient errors keep valid readings and missing properties clear them',()
 test('restart replays cached text without extending its expiry',()=>{
   const f=fixture();f.subscriptions[0].request.onData(f.envelope(72));
   const until=f.sent.at(-1).CORNER_UNTIL;
-  const resumed=create({...f.env,sources:sources.create({subscribeToSource(){return {unsubscribe(){}};}})});
+  const resumed=create({...f.env,sources:sources.create({subscribeToSource(){return {unsubscribe(){}};}},f.env.now)});
   resumed.start();assert.equal(f.sent.at(-1).CORNER_TEXT,'72%');assert.equal(f.sent.at(-1).CORNER_UNTIL,until);
 });
 test('corner refresh retries failed source setup without duplicating a recovered subscription',()=>{
@@ -77,7 +77,7 @@ test('corner refresh retries failed source setup without duplicating a recovered
   f.env.storage.setItem('clay-settings',JSON.stringify({CORNER_TL:binding}));
   const hub=sources.create({subscribeToSource(request){
     attempts.push(request);if(attempts.length===1)throw new Error('Unavailable');return {unsubscribe(){}};
-  }});
+  }},f.env.now);
   const corners=create({...f.env,sources:hub});corners.start();
   assert.equal(attempts.length,1);corners.refresh(true);assert.equal(attempts.length,2);
   attempts[1].onData({validUntilMs:f.env.now()+60000,instances:[{properties:{battery_level:{shortText:{text:'75%'}}}}]});
@@ -97,7 +97,7 @@ function automaticFixture() {
 }
 function restartAutomatic(f) {
   const subscriptions=[];
-  const hub=sources.create({subscribeToSource(request){const s={request,closed:false,unsubscribe(){this.closed=true;}};subscriptions.push(s);return s;}});
+  const hub=sources.create({subscribeToSource(request){const s={request,closed:false,unsubscribe(){this.closed=true;}};subscriptions.push(s);return s;}},f.env.now);
   const corners=create({...f.env,sources:hub});corners.start();
   return {corners,subscriptions};
 }
@@ -155,7 +155,7 @@ test('invalid automatic cache cannot break local choices or send malformed value
 });
 test('automatic caches survive subscription setup failure until their original expiry',()=>{
   const f=automaticFixture(),until=lastCorner(f,0).CORNER_UNTIL;
-  const corners=create({...f.env,sources:sources.create({subscribeToSource(){throw new Error('Unavailable');}})});
+  const corners=create({...f.env,sources:sources.create({subscribeToSource(){throw new Error('Unavailable');}},f.env.now)});
   corners.start();corners.refresh(true);
   assert.equal(lastCorner(f,0).CORNER_TEXT,'72%');assert.equal(lastCorner(f,0).CORNER_UNTIL,until);
   assert.equal(lastCorner(f,1).CORNER_TEXT,'Next');
@@ -169,4 +169,23 @@ test('denial clears only the affected source and keeps other automatic readings 
   f.subscriptions.find(s=>s.request.category==='phone').request.onError({code:'PERMISSION_DENIED'});
   assert.equal(lastCorner(f,0).CORNER_TEXT,'Next');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
   restartAutomatic(f);assert.equal(lastCorner(f,0).CORNER_TEXT,'Next');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+});
+for(const automatic of [false,true]) test(`${automatic?'automatic':'explicit'} corner rebuild cannot renew a shared cached reading`,()=>{
+  const f=fixture(automatic?{CORNER_TL:'auto'}:{CORNER_TL:binding});
+  if(automatic) f.subscriptions[0].request.onData(preferenceEnvelope(['battery_level']));
+  const parsed=JSON.parse(binding);f.hub.subscribe(parsed,()=>{},()=>{});
+  const request=f.subscriptions.find(s=>s.request.category==='phone').request;
+  const envelope=f.envelope(75);delete envelope.validUntilMs;
+  request.onData(envelope);const original=lastCorner(f,0);
+  f.advance(100000);f.corners.apply();assert.equal(lastCorner(f,0).CORNER_UNTIL,original.CORNER_UNTIL);
+  f.advance(201000);f.corners.refresh();assert.equal(lastCorner(f,0).CORNER_TEXT,'--');
+  f.corners.apply();assert.equal(lastCorner(f,0).CORNER_TEXT,'--');
+  request.onData(envelope);assert.equal(lastCorner(f,0).CORNER_TEXT,'75%');
+  assert.equal(lastCorner(f,0).CORNER_UNTIL,Math.floor(f.env.now()/1000)+300);
+});
+test('corner replay also preserves the maximum lifetime for sources with distant expiry',()=>{
+  const f=fixture();f.hub.subscribe(JSON.parse(binding),()=>{},()=>{});
+  f.subscriptions[0].request.onData(f.envelope(75,f.env.now()+7*86400000));
+  const until=lastCorner(f,0).CORNER_UNTIL;
+  f.advance(60000);f.corners.apply();assert.equal(lastCorner(f,0).CORNER_UNTIL,until);
 });
