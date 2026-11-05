@@ -100,6 +100,8 @@ Permissions for selected sources are handled by the Pebble app.
 Plugin text is limited to seven characters and 28 UTF-8 bytes.
 Long text can show an ellipsis in narrow layouts.
 Timestamps use the phone's local time in 24-hour format.
+Automatic corners retain the last preference order and valid readings across restarts.
+Fresh preferences replace that order, and permission denial clears the affected cached readings.
 Cached readings keep their original expiry; a reading with no expiry lasts five minutes, and no reading is retained for more than one day.
 Expired or missing readings show `--`.
 Watch battery, Bluetooth, steps, and heart rate remain local and work without the phone.

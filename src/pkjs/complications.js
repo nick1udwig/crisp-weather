@@ -1,13 +1,31 @@
 var sources = require('./plugin-sources');
 var KEYS = ['CORNER_TL','CORNER_TR','CORNER_BL','CORNER_BR'];
 var DEFAULTS = ['1','3','4','5'];
+var PREFERRED_CACHE_KEY = 'crisp-preferred-corners-v1';
 function create(env) {
   var choices = DEFAULTS.slice(), instances = ['','','',''], subscriptions = [], preferred = [], generation = 0;
   var cache = [], readings = [null,null,null,null], sent = [], errors = ['', '', '', ''], preferenceSubscription;
+  function validBinding(binding) {
+    return sources.parse(binding) && typeof binding.index === 'number' && isFinite(binding.index) && binding.index >= 0 && binding.index % 1 === 0;
+  }
+  function cachedReading(reading) {
+    return reading && typeof reading.text === 'string' && reading.text && sources.compact(reading.text) === reading.text &&
+      typeof reading.until === 'number' && isFinite(reading.until) && reading.until % 1 === 0 &&
+      reading.until > env.now()/1000 && reading.until <= Math.min(env.now()/1000+86400,2147483647) ? reading : null;
+  }
+  function savePreferred() {
+    try { env.storage.setItem(PREFERRED_CACHE_KEY,JSON.stringify(preferred)); } catch (error) {}
+  }
   function load() {
     try {
       cache = JSON.parse(env.storage.getItem('crisp-corner-cache')) || [];
       if (!Array.isArray(cache)) cache = [];
+    } catch (error) {}
+    try {
+      var savedPreferred = JSON.parse(env.storage.getItem(PREFERRED_CACHE_KEY));
+      if (Array.isArray(savedPreferred)) preferred = savedPreferred.slice(0,5).filter(function(candidate) {
+        return candidate && validBinding(candidate.binding);
+      }).map(function(candidate) { return {binding:candidate.binding,reading:cachedReading(candidate.reading)}; });
     } catch (error) {}
     try {
       var saved = JSON.parse(env.storage.getItem('clay-settings')) || {};
@@ -62,7 +80,6 @@ function create(env) {
     subscriptions.forEach(function(subscription) { subscription.unsubscribe(); });
     subscriptions = [];
     readings = KEYS.map(function(key,i) { return cache[i] && cache[i].identity === identity(i) ? cache[i].reading : null; });
-    preferred.forEach(function(candidate) { candidate.reading = null; });
     render();
     KEYS.forEach(function(key,i) {
       var binding = sources.parse(choices[i]);
@@ -81,10 +98,11 @@ function create(env) {
     if (choices.indexOf('auto') >= 0) preferred.forEach(function(candidate) {
       subscriptions.push(env.sources.subscribe(candidate.binding, function(envelope) {
         if (current !== generation) return;
-        candidate.reading = receive(candidate.binding,envelope); render();
-      }, function() {
+        candidate.reading = receive(candidate.binding,envelope); savePreferred(); render();
+      }, function(error) {
         if (current !== generation) return;
-        candidate.reading = null; render();
+        if (error && error.code === 'PERMISSION_DENIED') { candidate.reading = null; savePreferred(); }
+        render();
       }));
     });
   }
@@ -92,12 +110,20 @@ function create(env) {
     if (preferenceSubscription) { preferenceSubscription.unsubscribe(); preferenceSubscription = null; }
     if (choices.indexOf('auto') < 0) return;
     preferenceSubscription = env.sources.subscribe({category:'preferences',item:'complications'}, function(envelope) {
+      var previous = preferred;
       preferred = (envelope.instances || []).slice(0,5).map(function(instance) {
         var p = instance.properties || {}, index = p.index && p.index.numericValue && p.index.numericValue.value;
         return {binding:{category:sources.text(p.category),item:sources.text(p.item),property:sources.text(p.property),index:index}};
-      }).filter(function(entry) { return sources.parse(entry.binding) && typeof entry.binding.index === 'number' && entry.binding.index >= 0 && entry.binding.index % 1 === 0; });
-      rebuild();
-    }, function() { preferred = []; rebuild(); });
+      }).filter(function(entry) { return validBinding(entry.binding); }).map(function(entry) {
+        var old = previous.filter(function(candidate) { return bindingKey(candidate.binding) === bindingKey(entry.binding); })[0];
+        entry.reading = old ? cachedReading(old.reading) : null;
+        return entry;
+      });
+      savePreferred(); rebuild();
+    }, function(error) {
+      if (error && error.code === 'PERMISSION_DENIED') { preferred = []; savePreferred(); rebuild(); }
+      else render();
+    });
   }
   function configure(raw) {
     KEYS.forEach(function(key,i) {

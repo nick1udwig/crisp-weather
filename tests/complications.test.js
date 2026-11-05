@@ -83,3 +83,90 @@ test('corner refresh retries failed source setup without duplicating a recovered
   attempts[1].onData({validUntilMs:f.env.now()+60000,instances:[{properties:{battery_level:{shortText:{text:'75%'}}}}]});
   assert.equal(f.sent.at(-1).CORNER_TEXT,'75%');corners.refresh(true);assert.equal(attempts.length,2);
 });
+function preferenceEnvelope(properties=['battery_level','other']) {
+  return {instances:properties.map(property=>({properties:{
+    category:{shortText:{text:'phone'}},item:{shortText:{text:'phone_state'}},property:{shortText:{text:property}},index:{numericValue:{value:0}}
+  }}))};
+}
+function automaticFixture() {
+  const f=fixture({CORNER_TL:'auto',CORNER_TR:'auto'});
+  f.subscriptions[0].request.onData(preferenceEnvelope());
+  const envelope=f.envelope(72);envelope.instances[0].properties.other={shortText:{text:'Next'}};
+  f.subscriptions.at(-1).request.onData(envelope);
+  return f;
+}
+function restartAutomatic(f) {
+  const subscriptions=[];
+  const hub=sources.create({subscribeToSource(request){const s={request,closed:false,unsubscribe(){this.closed=true;}};subscriptions.push(s);return s;}});
+  const corners=create({...f.env,sources:hub});corners.start();
+  return {corners,subscriptions};
+}
+function lastCorner(f,slot) { return f.sent.filter(message=>message.CORNER_SLOT===slot).at(-1); }
+test('automatic corners survive restart while both preferences and source data are unavailable',()=>{
+  const f=automaticFixture(), until=lastCorner(f,0).CORNER_UNTIL;
+  f.advance(10000);const firstNewMessage=f.sent.length;
+  const resumed=restartAutomatic(f);
+  assert(f.sent.slice(firstNewMessage).every(message=>message.CORNER_TEXT!=='--'));
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'72%');assert.equal(lastCorner(f,1).CORNER_TEXT,'Next');
+  assert.equal(lastCorner(f,0).CORNER_UNTIL,until);
+  resumed.subscriptions.forEach(s=>s.request.onError({code:'TIMEOUT'}));
+  resumed.corners.refresh(true);
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'72%');assert.equal(lastCorner(f,1).CORNER_TEXT,'Next');
+  assert.equal(lastCorner(f,1).CORNER_UNTIL,until);
+  f.advance(50000);resumed.corners.refresh(true);
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'--');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+  restartAutomatic(f);assert.equal(lastCorner(f,0).CORNER_TEXT,'--');
+});
+test('fresh preference order reuses matching cached readings and removes obsolete readings',()=>{
+  const f=automaticFixture(),until=lastCorner(f,0).CORNER_UNTIL;
+  const resumed=restartAutomatic(f), preferences=resumed.subscriptions.find(s=>s.request.category==='preferences');
+  preferences.request.onData(preferenceEnvelope(['other','battery_level']));
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'Next');assert.equal(lastCorner(f,1).CORNER_TEXT,'72%');
+  assert.equal(lastCorner(f,1).CORNER_UNTIL,until);
+  preferences.request.onData(preferenceEnvelope(['unknown']));
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'--');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+  restartAutomatic(f);assert.equal(lastCorner(f,0).CORNER_TEXT,'--');
+});
+test('empty preferences and permission denial invalidate the automatic cache across restarts',()=>{
+  for(const failure of ['empty','preferences','source']) {
+    const f=automaticFixture(), resumed=restartAutomatic(f);
+    const preferences=resumed.subscriptions.find(s=>s.request.category==='preferences');
+    if(failure==='empty') preferences.request.onData({instances:[]});
+    else resumed.subscriptions.find(s=>s.request.category===(failure==='preferences'?'preferences':'phone')).request.onError({code:'PERMISSION_DENIED'});
+    assert.equal(lastCorner(f,0).CORNER_TEXT,'--');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+    restartAutomatic(f);assert.equal(lastCorner(f,0).CORNER_TEXT,'--');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+  }
+});
+test('a missing automatic reading clears its cached value and promotes the next preference',()=>{
+  const f=automaticFixture(), resumed=restartAutomatic(f);
+  const envelope=f.envelope(72);envelope.instances[0].properties={other:{shortText:{text:'Next'}}};
+  resumed.subscriptions.find(s=>s.request.category==='phone').request.onData(envelope);
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'Next');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+  restartAutomatic(f);assert.equal(lastCorner(f,0).CORNER_TEXT,'Next');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+});
+test('invalid automatic cache cannot break local choices or send malformed values',()=>{
+  for(const value of ['bad JSON',JSON.stringify([null,{binding:{category:'phone',item:'phone_state',property:'battery_level',index:0},reading:{text:'X'.repeat(500),until:1700000060}}])]) {
+    const f=fixture({CORNER_TL:'auto',CORNER_TR:'1'});
+    f.env.storage.setItem('crisp-preferred-corners-v1',value);
+    const start=f.sent.length,resumed=restartAutomatic(f);
+    assert.equal(resumed.corners.choices()[1],'1');
+    assert(f.sent.slice(start).every(message=>message.CORNER_SLOT===0&&message.CORNER_TEXT==='--'));
+  }
+});
+test('automatic caches survive subscription setup failure until their original expiry',()=>{
+  const f=automaticFixture(),until=lastCorner(f,0).CORNER_UNTIL;
+  const corners=create({...f.env,sources:sources.create({subscribeToSource(){throw new Error('Unavailable');}})});
+  corners.start();corners.refresh(true);
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'72%');assert.equal(lastCorner(f,0).CORNER_UNTIL,until);
+  assert.equal(lastCorner(f,1).CORNER_TEXT,'Next');
+});
+test('denial clears only the affected source and keeps other automatic readings cached',()=>{
+  const f=fixture({CORNER_TL:'auto',CORNER_TR:'auto'}),preferences=preferenceEnvelope();
+  preferences.instances[1].properties.category.shortText.text='other';
+  f.subscriptions[0].request.onData(preferences);
+  f.subscriptions.find(s=>s.request.category==='phone').request.onData(f.envelope(72));
+  f.subscriptions.find(s=>s.request.category==='other').request.onData({validUntilMs:f.env.now()+60000,instances:[{properties:{other:{shortText:{text:'Next'}}}}]});
+  f.subscriptions.find(s=>s.request.category==='phone').request.onError({code:'PERMISSION_DENIED'});
+  assert.equal(lastCorner(f,0).CORNER_TEXT,'Next');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+  restartAutomatic(f);assert.equal(lastCorner(f,0).CORNER_TEXT,'Next');assert.equal(lastCorner(f,1).CORNER_TEXT,'--');
+});
