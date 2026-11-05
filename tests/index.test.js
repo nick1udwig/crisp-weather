@@ -4,6 +4,7 @@ const fs=require('node:fs'),vm=require('node:vm');
 const {runtime}=require('./helpers/weather');
 test('settings retain manual location on the phone and send only watch settings',()=>{
   const f=runtime(), events={};
+  f.env.storage.setItem('clay-settings',JSON.stringify({WEATHER_PROVIDER:'open-meteo'}));
   class Clay {
     constructor(){this.meta={userData:{}};}
     getSettings(response,convert){assert.equal(convert,false);return JSON.parse(response);}
@@ -23,6 +24,7 @@ test('settings retain manual location on the phone and send only watch settings'
 });
 test('phone timers do not receive the weather service as their native receiver',()=>{
   const f=runtime(), events={};
+  f.env.storage.setItem('clay-settings',JSON.stringify({WEATHER_PROVIDER:'open-meteo'}));
   class Clay { constructor(){this.meta={userData:{}};} }
   function setTimer(callback,delay){
     assert.notEqual(this && this.storage,f.env.storage,'Illegal invocation of setTimeout');

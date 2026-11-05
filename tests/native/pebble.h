@@ -15,13 +15,15 @@
 #define MESSAGE_KEY_CORNER_SLOT 10
 #define MESSAGE_KEY_CORNER_TEXT 11
 #define MESSAGE_KEY_CORNER_UNTIL 12
+#define MESSAGE_KEY_WEATHER_RESET 13
+#define MESSAGE_KEY_WEATHER_VALID_UNTIL 14
 #define TUPLE_CSTRING 4
 #define TUPLE_INT 1
 #define TUPLE_UINT 2
 #define TUPLE_BYTE_ARRAY 3
 typedef union { int8_t int8; uint8_t uint8; int16_t int16; uint16_t uint16; int32_t int32; uint32_t uint32; uint8_t data[48]; char cstring[48]; } Value;
 typedef struct { int type; int length; Value *value; } Tuple;
-typedef struct { Tuple start, data, low, high, rain, fetched, daily_until, rain_until, corner_slot, corner_text, corner_until; } DictionaryIterator;
+typedef struct { Tuple start, data, low, high, rain, fetched, daily_until, rain_until, corner_slot, corner_text, corner_until, valid_until; } DictionaryIterator;
 Tuple *dict_find(DictionaryIterator *, int);
 int persist_read_data(int, void *, size_t);
 int persist_write_data(int, const void *, size_t);

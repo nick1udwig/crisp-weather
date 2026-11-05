@@ -4,7 +4,7 @@
 static uint8_t stored[64];
 static size_t stored_size;
 Tuple *dict_find(DictionaryIterator *d, int key) {
-  Tuple *t = key == 3 ? &d->low : key == 4 ? &d->high : key == 5 ? &d->rain : key == 7 ? &d->daily_until : &d->rain_until;
+  Tuple *t = key == 3 ? &d->low : key == 4 ? &d->high : key == 5 ? &d->rain : key == 7 ? &d->daily_until : key == 8 ? &d->rain_until : &d->valid_until;
   return t->value ? t : NULL;
 }
 int persist_read_data(int key, void *out, size_t n) { memcpy(out,stored,n); return stored_size; }
@@ -23,4 +23,9 @@ int main(void) {
   assert(!weather_rain(90000,&rain));
   wet.int32=101; assert(!weather_receive(&d));
   weather_init(); assert(weather_daily(100000,&lo,&hi)); assert(weather_rain(100000,&rain) && rain==70);
+  wet.int32=70;
+  Value expiry={.int32=100500}; d.valid_until=(Tuple){TUPLE_INT,4,&expiry};
+  assert(weather_receive(&d)); weather_init();
+  assert(weather_rain(100499,&rain)); assert(!weather_rain(100500,&rain)); assert(!weather_daily(100500,&lo,&hi));
+  weather_clear(); weather_init(); assert(!weather_rain(100000,&rain)); assert(!weather_daily(100000,&lo,&hi));
 }

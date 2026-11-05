@@ -21,7 +21,8 @@ function sendSettings(settings) {
 }
 var corners = require('./complications').create({storage:localStorage, sources:sourceHub,
   now:function() { return Date.now(); }, send:delivery.send});
-var weather = require('./weather-service').create({
+var weather = require('./weather-provider').create({
+  sources:sourceHub,
   storage:localStorage,
   now:function() { return Date.now(); },
   random:Math.random,
@@ -73,7 +74,7 @@ Pebble.addEventListener('webviewclosed',function(e) {
   if (!e || !e.response) return;
   try {
     var raw = clay.getSettings(e.response,false), location = {};
-    ['WEATHER_LOCATION_MODE','WEATHER_LATITUDE','WEATHER_LONGITUDE'].forEach(function(key) {
+    ['WEATHER_LOCATION_MODE','WEATHER_LATITUDE','WEATHER_LONGITUDE','WEATHER_PROVIDER','WEATHER_PLUGIN_INSTANCE'].forEach(function(key) {
       var field = raw[key];
       location[key] = field && typeof field === 'object' ? field.value : field;
       delete raw[key];

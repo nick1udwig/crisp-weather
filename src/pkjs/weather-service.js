@@ -12,7 +12,7 @@ function coordinates(pos) {
 function create(env) {
   var cache = cacheFactory.create(env.storage);
   var scheduler = schedulerFactory.create(env.storage, env.now, env.random);
-  var busy = false, timer = null, watchdog = null, generation = 0, activeXHR = null;
+  var stopped = false, busy = false, timer = null, watchdog = null, generation = 0, activeXHR = null;
   var deliveryBusy = false, deliveryTimer = null, deliveryAttempt = 0;
   var delivered = '', sending = '', deliveryBlocked = false, location = {};
   try { location = JSON.parse(env.storage.getItem(LOCATION_KEY)) || {}; } catch (e) {}
@@ -26,11 +26,12 @@ function create(env) {
     env.log(message + '; lastSuccess=' + next.lastSuccess + '; nextAllowed=' + next.next);
   }
   function schedule() {
+    if (stopped) return;
     if (timer !== null) env.clearTimeout(timer);
     timer = env.setTimeout(check, Math.max(1000, Math.min(86400000, scheduler.wait())));
   }
   function sendCached(force) {
-    if (deliveryBusy || deliveryTimer !== null) return;
+    if (stopped || deliveryBusy || deliveryTimer !== null) return;
     var payload = cache.get(Math.floor(env.now() / 1000));
     if (!payload) return;
     var signature = JSON.stringify(payload);
@@ -45,12 +46,12 @@ function create(env) {
       return true;
     }
     function success() {
-      if (!finish()) return;
+      if (!finish() || stopped) return;
       delivered = signature; deliveryAttempt = 0;
       sendCached();
     }
     function failure(e) {
-      if (!finish()) return;
+      if (!finish() || stopped) return;
       record('Weather send failed: ' + JSON.stringify(e));
       if (deliveryAttempt >= 3) { deliveryBlocked = true; return; }
       deliveryTimer = env.setTimeout(function() { deliveryTimer = null; sendCached(true); },[5000,15000,60000][deliveryAttempt++]);
@@ -58,7 +59,7 @@ function create(env) {
     try { env.send(payload,success,failure); } catch (e) { failure({error:String(e)}); }
   }
   function check() {
-    if (busy) return;
+    if (stopped || busy) return;
     sendCached();
     if (scheduler.wait() > 0) { schedule(); return; }
     busy = true;
@@ -169,6 +170,11 @@ function create(env) {
       '\nForecast age: ' + (s.cache.age === null ? 'Unavailable' : s.cache.age < 0 ? 'Clock changed' : Math.floor(s.cache.age/60) + ' minutes') +
       '\nNext allowed request: ' + new Date(s.schedule.next).toISOString();
   }
-  return {start:check,check:check,reconnect:reconnect,configure:configure,status:status,diagnostics:diagnostics};
+  function stop() {
+    stopped = true; generation++; busy = false;
+    [timer,watchdog,deliveryTimer].forEach(function(handle) { if (handle !== null) env.clearTimeout(handle); });
+    if (activeXHR) { try { activeXHR.abort(); } catch (error) {} }
+  }
+  return {stop:stop,start:check,check:check,reconnect:reconnect,configure:configure,status:status,diagnostics:diagnostics};
 }
 module.exports = {create:create};

@@ -68,7 +68,9 @@
       "WEATHER_REQUEST",
       "CORNER_SLOT",
       "CORNER_TEXT",
-      "CORNER_UNTIL"
+      "CORNER_UNTIL",
+      "WEATHER_RESET",
+      "WEATHER_VALID_UNTIL"
     ],
     "resources": {
       "media": [

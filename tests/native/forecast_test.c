@@ -4,7 +4,10 @@
 #include <string.h>
 static uint8_t stored[64];
 static size_t stored_size;
-Tuple *dict_find(DictionaryIterator *d, int key) { return key == 1 ? &d->start : key == 2 ? &d->data : &d->fetched; }
+Tuple *dict_find(DictionaryIterator *d, int key) {
+  Tuple *t = key == 1 ? &d->start : key == 2 ? &d->data : key == 6 ? &d->fetched : &d->valid_until;
+  return t->value ? t : NULL;
+}
 int persist_read_data(int key, void *out, size_t n) { memcpy(out,stored,n); return stored_size; }
 int persist_write_data(int key, const void *in, size_t n) { memcpy(stored,in,n); stored_size=n; return n; }
 int main(void) {
@@ -34,5 +37,12 @@ int main(void) {
   fetched.int32=101000; assert(forecast_receive(&d));
   assert(forecast_get(110800,0,&t,&k));
   assert(!forecast_get(111800,0,&t,&k));
+  Value expiry={.int32=101500};
+  d.valid_until=(Tuple){TUPLE_INT,4,&expiry};
+  assert(forecast_receive(&d));
+  forecast_init(); assert(forecast_get(101499,0,&t,&k));
+  assert(!forecast_get(101500,0,&t,&k)); assert(forecast_needs_refresh(101500));
+  expiry.int32=100000; assert(!forecast_receive(&d));
+  forecast_clear(); forecast_init(); assert(!forecast_get(101000,0,&t,&k));
   return 0;
 }

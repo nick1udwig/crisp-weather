@@ -21,6 +21,17 @@ const phone=subscriptions.find(s=>s.request.category==='phone');
 phone.request.onData({validUntilMs:f.env.now()+60000,instances:[{instanceId:'first',properties:{battery_level:{numericValue:{value:1}}}},
   {instanceId:'other',properties:{name:{shortText:{text:'Second phone'}},battery_level:{numericValue:{value:75,unit:'%'}}}}]});
 assert.equal(f.sent.at(-1).CORNER_TEXT,'75%');
+const weather=subscriptions.find(s=>s.request.category==='weather');
+const start=Math.floor(f.env.now()/3600000)*3600;
+weather.request.onData({validUntilMs:f.env.now()+60000,instances:[{instanceId:'home',properties:{
+  hourly_temperature:{series:{start,stepSec:3600,numericValue:{values:Array(24).fill(68),unit:'°F'}}},
+  hourly_condition_code:{series:{start,stepSec:3600,longText:{values:Array(24).fill('cloudy')}}}
+}}]});
+const forecast=f.sent.at(-1);
+assert.equal(forecast.FORECAST_DATA[0],120);assert.equal(forecast.FORECAST_DATA[1],2);
+assert.equal(forecast.WEATHER_RESET,1);assert.equal(forecast.WEATHER_VALID_UNTIL,Math.floor(f.env.now()/1000)+60);
+assert.equal(f.requests.length,0);assert.equal(f.locations.length,0);
+
 fire('showConfiguration');assert(html.includes('phone_state'));
 fire('webviewclosed',{response:JSON.stringify({CORNER_TL:{value:binding},CORNER_TL_INSTANCE:{value:'other'}})});
 const settings=f.sent.find(message=>message[keys.CORNER_TL] === '7');assert(settings);
@@ -32,4 +43,4 @@ for(const message of f.sent) {
   assert(size<=256);
 }
 if(process.env.CRISP_SETTINGS_HTML) fs.writeFileSync(process.env.CRISP_SETTINGS_HTML,html);
-console.log('Plugin bundle passed: real Clay selection, stable instance, permissions, and message size.');
+console.log('Plugin bundle passed: Clay selection, stable instance, weather conversion, permissions, no direct HTTP, and message size.');

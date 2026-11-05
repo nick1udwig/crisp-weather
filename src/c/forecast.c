@@ -1,10 +1,14 @@
 #include "forecast.h"
 #include <string.h>
 #define FORECAST_PERSIST 40
-static struct { int32_t start, fetched; uint8_t data[FORECAST_HOURS * 2]; } s_forecast;
+static struct { int32_t start, fetched, until; uint8_t data[FORECAST_HOURS * 2]; } s_forecast;
 void forecast_init(void) {
   if (persist_read_data(FORECAST_PERSIST, &s_forecast, sizeof(s_forecast)) != sizeof(s_forecast))
     memset(&s_forecast, 0, sizeof(s_forecast));
+}
+void forecast_clear(void) {
+  memset(&s_forecast, 0, sizeof(s_forecast));
+  persist_write_data(FORECAST_PERSIST, &s_forecast, sizeof(s_forecast));
 }
 bool forecast_receive(DictionaryIterator *iter) {
   Tuple *start = dict_find(iter, MESSAGE_KEY_FORECAST_START);
@@ -14,6 +18,8 @@ bool forecast_receive(DictionaryIterator *iter) {
       (fetched->type != TUPLE_INT && fetched->type != TUPLE_UINT) || start->length != 4 ||
       (start->type != TUPLE_INT && start->type != TUPLE_UINT) ||
       data->type != TUPLE_BYTE_ARRAY || data->length != sizeof(s_forecast.data)) return false;
+  Tuple *until = dict_find(iter, MESSAGE_KEY_WEATHER_VALID_UNTIL);
+  if (until && (until->length != 4 || (until->type != TUPLE_INT && until->type != TUPLE_UINT) || until->value->int32 <= fetched->value->int32)) return false;
   int32_t hour = start->value->int32, fetched_at = fetched->value->int32;
   if (hour <= 0 || fetched_at < hour || fetched_at - hour >= 3600) return false;
   uint8_t bytes[FORECAST_HOURS * 2];
@@ -22,16 +28,17 @@ bool forecast_receive(DictionaryIterator *iter) {
     if ((bytes[i*2] > 200 && bytes[i*2] != 255) || bytes[i*2+1] > 7) return false;
   s_forecast.start = start->value->int32;
   s_forecast.fetched = fetched->value->int32;
+  s_forecast.until = until ? until->value->int32 : 0;
   memcpy(s_forecast.data, data->value->data, sizeof(s_forecast.data));
   persist_write_data(FORECAST_PERSIST, &s_forecast, sizeof(s_forecast));
   return true;
 }
 bool forecast_needs_refresh(time_t now) {
-  return !s_forecast.fetched || now < s_forecast.fetched - 300 || now - s_forecast.fetched >= 1800;
+  return (s_forecast.until && now >= s_forecast.until) || !s_forecast.fetched || now < s_forecast.fetched - 300 || now - s_forecast.fetched >= 1800;
 }
 bool forecast_get(time_t now, int ahead, int *temp, int *icon) {
   // A replay retains the original fetch time.
-  if (!s_forecast.start || now < s_forecast.start || now < s_forecast.fetched - 300 || now - s_forecast.fetched >= 3*3600) return false;
+  if ((s_forecast.until && now >= s_forecast.until) || !s_forecast.start || now < s_forecast.start || now < s_forecast.fetched - 300 || now - s_forecast.fetched >= 3*3600) return false;
   int i = (now - s_forecast.start) / 3600 + ahead;
   if (i < 0 || i >= FORECAST_HOURS || s_forecast.data[i*2] == 255) return false;
   *temp = s_forecast.data[i*2] - 100;

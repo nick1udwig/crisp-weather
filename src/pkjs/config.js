@@ -134,8 +134,12 @@ module.exports = [
   {
     "type": "section",
     "items": [
-      { "type": "heading", "defaultValue": "Weather location" },
+      { "type": "heading", "defaultValue": "Weather source" },
+      {"type":"select","messageKey":"WEATHER_PROVIDER","label":"Weather provider","defaultValue":"plugin", "options":[
+        {"label":"Pebble weather plugin","value":"plugin"},{"label":"Open-Meteo (legacy)","value":"open-meteo"}]},
+      {"type":"select","messageKey":"WEATHER_PLUGIN_INSTANCE","label":"Pebble weather location","defaultValue":"", "options":[{"label":"First location","value":""}]},
       { "type": "text", "id": "weatherStatus", "defaultValue": "Waiting for weather" },
+      { "type": "text", "id": "WEATHER_PROVIDER_PREVIEW", "defaultValue": "" },
       {
         "type": "select", "messageKey": "WEATHER_LOCATION_MODE", "label": "Location source", "defaultValue": "0",
         "options": [{"label":"Phone location","value":"0"},{"label":"Manual coordinates","value":"1"}]

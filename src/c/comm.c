@@ -93,7 +93,11 @@ static void in_recv_handler(DictionaryIterator *iter, void *context) {
   // this theme.
   config_changed |= store_select(iter, MESSAGE_KEY_THEME, PERSIST_KEY_THEME);
 
-  bool weather_changed = forecast_receive(iter);
+  Tuple *reset = dict_find(iter,MESSAGE_KEY_WEATHER_RESET);
+  bool weather_changed = reset && (reset->type == TUPLE_INT || reset->type == TUPLE_UINT) &&
+    (reset->length == 1 || reset->length == 2 || reset->length == 4) && tuple_get_int(reset) == 1;
+  if (weather_changed) { forecast_clear(); weather_clear(); }
+  weather_changed |= forecast_receive(iter);
   weather_changed |= weather_receive(iter);
 
   bool corners_changed = complications_receive(iter);

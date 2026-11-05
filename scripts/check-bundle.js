@@ -6,6 +6,7 @@ const config = require('../src/pkjs/config');
 const keys = JSON.parse(fs.readFileSync('build/js/message_keys.json','utf8'));
 const source = fs.readFileSync('build/pebble-js-app.js','utf8');
 const f = runtime();
+f.env.storage.setItem('clay-settings',JSON.stringify({WEATHER_PROVIDER:'open-meteo'}));
 class ClockDate extends Date { static now() { return f.env.now(); } }
 function launch() {
   const events = {};
@@ -24,9 +25,10 @@ function launch() {
 const fire=launch();
 const settings=Object.fromEntries(config.flatMap(item=>item.items||[item]).filter(item=>item.messageKey)
   .map(item=>[item.messageKey,{value:item.type==='color'?parseInt(item.defaultValue,16):item.defaultValue}]));
+settings.WEATHER_PROVIDER={value:'open-meteo'};
 fire('webviewclosed',{response:JSON.stringify(settings)});
 const outgoing=f.sent[0];
-for(const key of ['WEATHER_LOCATION_MODE','WEATHER_LATITUDE','WEATHER_LONGITUDE']) assert.equal(outgoing[keys[key]],undefined);
+for(const key of ['WEATHER_LOCATION_MODE','WEATHER_LATITUDE','WEATHER_LONGITUDE','WEATHER_PROVIDER','WEATHER_PLUGIN_INSTANCE']) assert.equal(outgoing[keys[key]],undefined);
 assert.equal(outgoing[keys.THEME],'0');
 function size(message) {
   return 1+Object.values(message).reduce((n,v)=>n+7+(typeof v==='string'?Buffer.byteLength(v)+1:Array.isArray(v)?v.length:4),0);
