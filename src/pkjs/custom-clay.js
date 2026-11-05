@@ -188,7 +188,12 @@ module.exports = function() {
       }
       function show(message) { if (preview) preview.set(escape(message)); }
       function update(reset) {
-        var selected = source.get(), current = ++version, saved = reset ? '' : instance.get();
+        var selected = source.get(), current = ++version;
+        if (drawHandler) { instance.off(drawHandler); drawHandler = null; }
+        if (reset) {
+          instance.$manipulatorTarget.set('innerHTML','<option value="">First instance</option>');
+          instance.set('');
+        }
         if (key === 'WEATHER_PROVIDER') {
           ['WEATHER_LOCATION_MODE','WEATHER_LATITUDE','WEATHER_LONGITUDE'].forEach(function(name) {
             var field = clayConfig.getItemByMessageKey(name);
@@ -205,7 +210,7 @@ module.exports = function() {
         if (typeof Pebble === 'undefined' || !Pebble.sendMessage) { show('Enable plugins in the Pebble app.'); return; }
         Pebble.sendMessage('pkjs',{source:selected}).then(function(reply) {
           if (version !== current) return;
-          var rows = reply.instances || [], options = [{value:'',label:'First instance'}].concat(rows);
+          var saved = instance.get(), rows = reply.instances || [], options = [{value:'',label:'First instance'}].concat(rows);
           if (saved && !options.some(function(option) { return option.value === saved; })) options.push({value:saved,label:'Unavailable instance'});
           instance.$manipulatorTarget.set('innerHTML',options.map(function(option) {
             return '<option value="' + escape(option.value) + '">' + escape(option.label) + '</option>';
