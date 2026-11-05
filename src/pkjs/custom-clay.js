@@ -179,27 +179,22 @@ module.exports = function() {
       }).replace(/\n/g, '<br>'));
     }
 
-    ['CORNER_TL','CORNER_TR','CORNER_BL','CORNER_BR','WEATHER_PROVIDER'].forEach(function(key) {
-      var source = clayConfig.getItemByMessageKey(key), instance = clayConfig.getItemByMessageKey(key === 'WEATHER_PROVIDER' ? 'WEATHER_PLUGIN_INSTANCE' : key + '_INSTANCE');
+    ['CORNER_TL','CORNER_TR','CORNER_BL','CORNER_BR','WEATHER_PLUGIN_INSTANCE'].forEach(function(key) {
+      var weather = key === 'WEATHER_PLUGIN_INSTANCE';
+      var source = weather ? null : clayConfig.getItemByMessageKey(key);
+      var instance = clayConfig.getItemByMessageKey(weather ? key : key + '_INSTANCE');
       var preview = clayConfig.getItemById(key + '_PREVIEW'), version = 0, drawHandler;
-      if (!source || !instance || !instance.$manipulatorTarget) return;
+      if ((!weather && !source) || !instance || !instance.$manipulatorTarget) return;
       function escape(value) {
         return String(value).replace(/[&<>"']/g,function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
       }
       function show(message) { if (preview) preview.set(escape(message)); }
       function update(reset) {
-        var selected = source.get(), current = ++version;
+        var selected = weather ? JSON.stringify({category:'weather',item:'location',property:'temperature'}) : source.get(), current = ++version;
         if (drawHandler) { instance.off(drawHandler); drawHandler = null; }
         if (reset) {
           instance.$manipulatorTarget.set('innerHTML','<option value="">First instance</option>');
           instance.set('');
-        }
-        if (key === 'WEATHER_PROVIDER') {
-          ['WEATHER_LOCATION_MODE','WEATHER_LATITUDE','WEATHER_LONGITUDE'].forEach(function(name) {
-            var field = clayConfig.getItemByMessageKey(name);
-            if (field) { if (selected === 'open-meteo') field.show(); else field.hide(); }
-          });
-          selected = selected === 'plugin' ? JSON.stringify({category:'weather',item:'location',property:'temperature'}) : '';
         }
         var binding;
         try { binding = JSON.parse(selected); } catch (error) {}
@@ -224,7 +219,7 @@ module.exports = function() {
           drawHandler = draw; instance.on('change',draw); draw();
         }).catch(function() { if (version === current) show('Plugin unavailable'); });
       }
-      source.on('change',function() { update(true); });
+      if (source) source.on('change',function() { update(true); });
       if (typeof Pebble !== 'undefined' && Pebble.addEventListener) Pebble.addEventListener('ready',function(e) {
         if (e.target === 'pkjs') update(false);
       });

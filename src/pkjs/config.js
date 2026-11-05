@@ -134,24 +134,11 @@ module.exports = [
   {
     "type": "section",
     "items": [
-      { "type": "heading", "defaultValue": "Weather source" },
-      {"type":"select","messageKey":"WEATHER_PROVIDER","label":"Weather provider","defaultValue":"plugin", "options":[
-        {"label":"Pebble weather plugin","value":"plugin"},{"label":"Open-Meteo (legacy)","value":"open-meteo"}]},
+      { "type": "heading", "defaultValue": "Weather location" },
+      { "type": "text", "defaultValue": "Weather comes from your preferred Pebble plugin. Manage locations and providers in the Pebble app." },
       {"type":"select","messageKey":"WEATHER_PLUGIN_INSTANCE","label":"Pebble weather location","defaultValue":"", "options":[{"label":"First location","value":""}]},
       { "type": "text", "id": "weatherStatus", "defaultValue": "Waiting for weather" },
-      { "type": "text", "id": "WEATHER_PROVIDER_PREVIEW", "defaultValue": "" },
-      {
-        "type": "select", "messageKey": "WEATHER_LOCATION_MODE", "label": "Location source", "defaultValue": "0",
-        "options": [{"label":"Phone location","value":"0"},{"label":"Manual coordinates","value":"1"}]
-      },
-      {
-        "type": "input", "messageKey": "WEATHER_LATITUDE", "label": "Latitude", "defaultValue": "",
-        "description": "Manual location: -90 to 90. Use a decimal point.", "attributes": {"type":"text","maxlength":20}
-      },
-      {
-        "type": "input", "messageKey": "WEATHER_LONGITUDE", "label": "Longitude", "defaultValue": "",
-        "description": "Manual location: -180 to 180. West is negative.", "attributes": {"type":"text","maxlength":20}
-      }
+      { "type": "text", "id": "WEATHER_PLUGIN_INSTANCE_PREVIEW", "defaultValue": "" }
     ]
   },
   {

@@ -78,3 +78,32 @@ test('a weather subscriber cannot renew old shared data without a source update'
   request.onData(envelope);assert.equal(f.sent.at(-1).WEATHER_FETCHED_AT,Math.floor(f.env.now()/1000));
   assert.equal(f.sent.at(-1).WEATHER_VALID_UNTIL,Math.floor(f.env.now()/1000)+1800);
 });
+test('startup restores the selected plugin location from settings',()=>{
+  const f=fixture();f.requests[0].data(f.envelope);const original=f.sent.at(-1);f.service.stop();
+  f.env.storage.setItem('clay-settings',JSON.stringify({WEATHER_PLUGIN_INSTANCE:'home'}));
+  const resumed=create(f.env);resumed.start();assert.deepEqual(f.sent.at(-1),original);
+});
+test('changing location clears old weather and ignores old subscription callbacks',()=>{
+  const f=fixture();f.requests[0].data(f.envelope);
+  f.service.configure('work');assert(f.requests[0].closed);assert.equal(f.requests.length,2);
+  assert.deepEqual(f.sent.at(-1),{WEATHER_RESET:1});
+  assert.equal(JSON.parse(f.values['crisp-plugin-weather-v1']),null);
+  const count=f.sent.length;
+  f.requests[0].data(f.envelope);f.requests[0].error({code:'PERMISSION_DENIED'});
+  assert.equal(f.sent.length,count);
+  const work=JSON.parse(JSON.stringify(f.envelope));work.instances[0].instanceId='work';
+  work.instances[0].properties.hourly_temperature.series.numericValue.values.fill(22);
+  f.requests[1].data(work);assert.equal(f.sent.at(-1).FORECAST_DATA[0],122);
+  f.requests[0].error({code:'PERMISSION_DENIED'});
+  f.service.reconnect();assert.equal(f.sent.at(-1).FORECAST_DATA[0],122);
+  f.service.configure('work');f.service.configure(undefined);assert.equal(f.requests.length,2);
+  f.service.configure('');assert.deepEqual(f.sent.at(-1),{WEATHER_RESET:1});
+  f.requests[2].data(f.envelope);assert.equal(f.sent.at(-1).FORECAST_DATA[0],118);
+});
+test('a late failed delivery for the previous location cannot invalidate the current delivery',()=>{
+  const f=fixture(),failures=[];
+  f.env.send=(payload,success,failure)=>{f.sent.push(payload);failures.push(failure);success();};
+  f.service.reconnect();const previous=failures.at(-1);
+  f.service.configure('work');previous();
+  const count=f.sent.length;f.service.check();assert.equal(f.sent.length,count);
+});

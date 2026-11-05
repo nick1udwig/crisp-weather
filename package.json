@@ -27,51 +27,47 @@
       "watchface": true
     },
     "capabilities": [
-      "configurable",
-      "location"
+      "configurable"
     ],
-    "messageKeys": [
-      "DATE",
-      "DAY",
-      "BT",
-      "BATTERY",
-      "SECOND_HAND",
-      "HR_INDICATOR",
-      "HOUR_MARKERS_COLOR",
-      "MINUTE_MARKERS_COLOR",
-      "CHARGING_MARKERS_COLOR",
-      "HANDS_COLOR",
-      "TIPS_COLOR",
-      "SECOND_HAND_COLOR",
-      "SECOND_TIP_COLOR",
-      "CALENDAR_DAY_COLOR",
-      "CORNER_TL",
-      "CORNER_TR",
-      "CORNER_BL",
-      "CORNER_BR",
-      "TEMP_UNIT",
-      "THEME",
-      "WEATHER_TEMP_MIN",
-      "WEATHER_TEMP_MAX",
-      "WEATHER_PRECIP",
-      "FORECAST_START",
-      "FORECAST_DATA",
-      "CURRENT_TEMP_COLOR",
-      "FUTURE_TEMP_COLOR",
-      "BT_VIBRATE",
-      "WEATHER_FETCHED_AT",
-      "WEATHER_DAILY_UNTIL",
-      "WEATHER_RAIN_UNTIL",
-      "WEATHER_LOCATION_MODE",
-      "WEATHER_LATITUDE",
-      "WEATHER_LONGITUDE",
-      "WEATHER_REQUEST",
-      "CORNER_SLOT",
-      "CORNER_TEXT",
-      "CORNER_UNTIL",
-      "WEATHER_RESET",
-      "WEATHER_VALID_UNTIL"
-    ],
+    "messageKeys": {
+      "DATE": 10000,
+      "DAY": 10001,
+      "BT": 10002,
+      "BATTERY": 10003,
+      "SECOND_HAND": 10004,
+      "HR_INDICATOR": 10005,
+      "HOUR_MARKERS_COLOR": 10006,
+      "MINUTE_MARKERS_COLOR": 10007,
+      "CHARGING_MARKERS_COLOR": 10008,
+      "HANDS_COLOR": 10009,
+      "TIPS_COLOR": 10010,
+      "SECOND_HAND_COLOR": 10011,
+      "SECOND_TIP_COLOR": 10012,
+      "CALENDAR_DAY_COLOR": 10013,
+      "CORNER_TL": 10014,
+      "CORNER_TR": 10015,
+      "CORNER_BL": 10016,
+      "CORNER_BR": 10017,
+      "TEMP_UNIT": 10018,
+      "THEME": 10019,
+      "WEATHER_TEMP_MIN": 10020,
+      "WEATHER_TEMP_MAX": 10021,
+      "WEATHER_PRECIP": 10022,
+      "FORECAST_START": 10023,
+      "FORECAST_DATA": 10024,
+      "CURRENT_TEMP_COLOR": 10025,
+      "FUTURE_TEMP_COLOR": 10026,
+      "BT_VIBRATE": 10027,
+      "WEATHER_FETCHED_AT": 10028,
+      "WEATHER_DAILY_UNTIL": 10029,
+      "WEATHER_RAIN_UNTIL": 10030,
+      "WEATHER_REQUEST": 10034,
+      "CORNER_SLOT": 10035,
+      "CORNER_TEXT": 10036,
+      "CORNER_UNTIL": 10037,
+      "WEATHER_RESET": 10038,
+      "WEATHER_VALID_UNTIL": 10039
+    },
     "resources": {
       "media": [
         {
@@ -84,15 +80,7 @@
     },
     "usesPermissions": [
       "Location",
-      "Health",
-      {
-        "name": "Internet",
-        "parameters": {
-          "domains": [
-            "api.open-meteo.com"
-          ]
-        }
-      }
+      "Health"
     ]
   },
   "scripts": {

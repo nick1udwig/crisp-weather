@@ -13,9 +13,9 @@ function field(value,options) {
   return item;
 }
 function page(key='CORNER_TL',bridge=true) {
-  const source=field(key==='WEATHER_PROVIDER'?'plugin':first),instance=field('old-id',['','old-id']);
+  const source=field(first),instance=field('old-id',['','old-id']);
   const preview=field(''),requests=[],ready=[];
-  const items={[key]:source,[key==='WEATHER_PROVIDER'?'WEATHER_PLUGIN_INSTANCE':key+'_INSTANCE']:instance};
+  const items=key==='WEATHER_PLUGIN_INSTANCE'?{[key]:instance}:{[key]:source,[key+'_INSTANCE']:instance};
   const pebble={addEventListener(event,fn){ready.push(fn);}};
   if(bridge)pebble.sendMessage=(target,message)=>new Promise((resolve,reject)=>requests.push({target,message,resolve,reject}));
   vm.runInNewContext('('+custom.toString()+').call(page)',{Pebble:pebble,page:{
@@ -59,10 +59,11 @@ test('old preview handlers and replies cannot overwrite a new source preview',as
   assert.equal(p.preview.get(),'Loading plugin reading…');assert.equal(p.instance.get(),'');
   p.requests[2].resolve(reply('old-id','Correct'));await flush();assert.equal(p.preview.get(),'Correct');
 });
-test('weather provider changes clear the saved plugin location immediately',async()=>{
-  const p=page('WEATHER_PROVIDER');p.source.set('open-meteo');
-  assert.equal(p.instance.get(),'');assert(p.instance.hidden);
-  p.source.set('plugin');assert.equal(p.instance.get(),'');assert(!p.instance.hidden);
-  p.requests[0].resolve(reply('old-id'));await flush();assert.deepEqual(p.instance.options,['']);
-  p.requests[1].resolve(reply('new-id'));await flush();assert.deepEqual(p.instance.options,['','new-id']);
+test('weather locations query the fixed source and preserve the current choice across delayed replies',async()=>{
+  const p=page('WEATHER_PLUGIN_INSTANCE');
+  assert.equal(p.requests[0].message.source,first);assert(!p.instance.hidden);
+  p.requests[0].resolve(reply('old-id','18°C'));await flush();
+  assert.equal(p.instance.get(),'old-id');assert.equal(p.preview.get(),'18°C');
+  p.ready();p.instance.set('');p.requests[1].resolve(reply('new-id','20°C'));await flush();
+  assert.equal(p.instance.get(),'');assert.equal(p.preview.get(),'20°C');
 });

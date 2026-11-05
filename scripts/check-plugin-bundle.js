@@ -8,7 +8,7 @@ let html;
 class ClockDate extends Date { static now(){return f.env.now();} }
 vm.runInNewContext(fs.readFileSync('build/pebble-js-app.js','utf8'),{
   localStorage:f.env.storage,Date:ClockDate,Math,setTimeout:f.env.setTimeout,clearTimeout:f.env.clearTimeout,
-  navigator:{geolocation:f.env.geolocation},XMLHttpRequest:f.env.XMLHttpRequest,console:{log:f.env.log,error:f.env.log},
+  console:{log:f.env.log,error:f.env.log},
   Pebble:{addEventListener:(name,fn)=>{(events[name] ||= []).push(fn);},getActiveWatchInfo:()=>({platform:'emery',firmware:{major:4,minor:9,patch:0}}),
     getAccountToken:()=>'',getWatchToken:()=>'',sendAppMessage:f.env.send,
     openURL:url=>{html=decodeURIComponent(url.slice(url.indexOf(',')+1));},
@@ -30,7 +30,8 @@ weather.request.onData({validUntilMs:f.env.now()+60000,instances:[{instanceId:'h
 const forecast=f.sent.at(-1);
 assert.equal(forecast.FORECAST_DATA[0],120);assert.equal(forecast.FORECAST_DATA[1],2);
 assert.equal(forecast.WEATHER_RESET,1);assert.equal(forecast.WEATHER_VALID_UNTIL,Math.floor(f.env.now()/1000)+60);
-assert.equal(f.requests.length,0);assert.equal(f.locations.length,0);
+assert(!fs.readFileSync('build/pebble-js-app.js','utf8').includes('api.open-meteo.com'));
+assert(!JSON.parse(fs.readFileSync('build/appinfo.json','utf8')).usesPermissions.some(p=>p.name==='Internet'));
 
 fire('showConfiguration');assert(html.includes('phone_state'));
 fire('webviewclosed',{response:JSON.stringify({CORNER_TL:{value:binding},CORNER_TL_INSTANCE:{value:'other'}})});

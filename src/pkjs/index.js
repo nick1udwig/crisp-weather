@@ -1,5 +1,6 @@
 var Clay = require('@rebble/clay');
 var messageKeys = require('message_keys');
+require('./settings-migration').run(localStorage);
 var clay = new Clay(require('./config'),require('./custom-clay'),{autoHandleEvents:false});
 var sources = require('./plugin-sources');
 var sourceHub = sources.create(Pebble);
@@ -21,18 +22,8 @@ function sendSettings(settings) {
 }
 var corners = require('./complications').create({storage:localStorage, sources:sourceHub,
   now:function() { return Date.now(); }, send:delivery.send});
-var weather = require('./weather-provider').create({
-  sources:sourceHub,
-  storage:localStorage,
-  now:function() { return Date.now(); },
-  random:Math.random,
-  setTimeout:function(callback,delay) { return setTimeout(callback,delay); },
-  clearTimeout:function(handle) { clearTimeout(handle); },
-  geolocation:navigator.geolocation,
-  XMLHttpRequest:XMLHttpRequest,
-  send:delivery.send,
-  log:function(message) { console.log(message); }
-});
+var weather = require('./plugin-weather').create({sources:sourceHub, storage:localStorage,
+  now:function() { return Date.now(); }, send:delivery.send});
 Pebble.addEventListener('ready',function() {
   console.log('Crisp PebbleKit JS ready');
   if (pendingSettings) sendSettings(pendingSettings);
@@ -73,14 +64,10 @@ Pebble.addEventListener('showConfiguration',function() {
 Pebble.addEventListener('webviewclosed',function(e) {
   if (!e || !e.response) return;
   try {
-    var raw = clay.getSettings(e.response,false), location = {};
-    ['WEATHER_LOCATION_MODE','WEATHER_LATITUDE','WEATHER_LONGITUDE','WEATHER_PROVIDER','WEATHER_PLUGIN_INSTANCE'].forEach(function(key) {
-      var field = raw[key];
-      location[key] = field && typeof field === 'object' ? field.value : field;
-      delete raw[key];
-    });
-    weather.configure(location);
+    var raw = clay.getSettings(e.response,false), location = raw.WEATHER_PLUGIN_INSTANCE;
+    weather.configure(location && typeof location === 'object' ? location.value : location);
     corners.configure(raw);
+    Object.keys(raw).forEach(function(key) { if (!Object.prototype.hasOwnProperty.call(messageKeys,key)) delete raw[key]; });
     var settings = Clay.prepareSettingsForAppMessage(raw);
     sendSettings(settings);
     corners.apply();

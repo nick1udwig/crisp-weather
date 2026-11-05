@@ -20,36 +20,24 @@ Based on [Michal Bláha’s Crisp](https://github.com/michalblaha/Crisp-watchfac
   Light mode uses dark tick marks, dark blue forecast numbers, and dark weather accents.
 - Get weather from the preferred Pebble weather plugin and select a saved Pebble weather location.
   Keep Crisp's forecast dial, condition artwork, temperature units, and low/high readout.
-- Select [Open-Meteo](https://open-meteo.com/) as a legacy alternative, with phone location or manual coordinates.
 
 Weather is an hourly forecast, not a live observation.
 The watchface shows the original Crisp dial until weather arrives.
 Plugin forecasts expire at the source deadline or after three hours, whichever comes first.
 A source without a deadline is valid for 30 minutes.
-Legacy forecasts expire after three hours.
 Missing hourly temperatures appear as ticks.
 Missing conditions use an unknown icon.
 Daily temperatures and rain can arrive independently.
 Daily temperatures expire at the forecast day's end; rain expires at its forecast hour's end.
 
-The phone saves weather before Bluetooth delivery and retries delivery without another API request.
+The phone saves weather before Bluetooth delivery and retries delivery without another source subscription.
 Plugin replay keeps the original timestamps and expiry.
 Permission denial clears plugin weather; it does not switch to another backend.
-
-The following request limits apply to the legacy Open-Meteo backend.
-Network failures use increasing retry delays; HTTP 429 starts a saved cooldown and respects `Retry-After`.
-Requests are limited to one per minute, six per rolling hour, and 96 per rolling day per installation.
-These local limits do not replace [Open-Meteo's shared limits](https://open-meteo.com/en/terms).
-Restarting the face or reconnecting the watch does not reset request limits.
-If request history cannot be stored, HTTP requests stop to protect the request budget.
-Settings show location errors, the last successful fetch, forecast age, and the next allowed request.
-A saved phone location can be used for up to six hours when a new fix times out or is unavailable.
 
 Targets: aplite, basalt, chalk, diorite, emery, flint, and gabbro.
 Crisp Weather can be installed alongside the original Crisp.
 
 This is an early version.
-Legacy weather delivery has been checked in the emulator.
 Plugin payloads, expiry, settings, and layouts have automated or emulator checks.
 Live plugin delivery, phone background behavior, and Bluetooth recovery still need physical hardware checks.
 
@@ -69,10 +57,10 @@ pebble install --emulator emery
 The watchface bundle is written to `build/crisp-weather.pbw`.
 
 - `src/c/`: watchface rendering, settings, and forecast cache.
-- `src/pkjs/`: phone-side weather requests, forecast parsing, and settings UI.
+- `src/pkjs/`: phone-side plugin subscriptions, forecast parsing, and settings UI.
 - `tests/`: JavaScript tests and native C tests.
 
-Tests cover partial responses, component expiry, rate limits, restarts, clock changes, timeouts, and failed delivery.
+Tests cover partial responses, component expiry, settings migration, restarts, clock changes, timeouts, and failed delivery.
 The native tests need a C compiler and Python 3.
 The bundle check uses the built JavaScript, real Clay settings, and simulated phone and plugin services.
 
@@ -109,21 +97,21 @@ Existing corner settings are preserved.
 
 ### Weather plugins
 
-Pebble weather is the default on this preview branch.
-Select a location under Weather source in the watchface settings.
+Weather comes from Pebble plugins.
+Select a location under Weather location in the watchface settings.
 The first-location option follows the location order in the Pebble app; a named location keeps its stable identifier.
 Configure weather locations and preferred providers in the Pebble app.
 The face subscribes to `weather/location` and converts its series to the existing compact forecast format.
-It does not make direct HTTP or geolocation requests in plugin mode.
+It does not make direct HTTP or geolocation requests.
+The manifest keeps Location permission for weather sources and Health permission for local watch readings.
 
 Hourly temperatures require a timed numeric series in Celsius or Fahrenheit.
 Missing temperatures remain empty ticks, and unknown conditions use the unknown icon.
 Daily low/high and rain chance can work without hourly temperatures.
 The rain readout uses the source's current precipitation chance, not rainfall amount.
 A removed location clears the weather instead of selecting another place.
-Changing providers or plugin locations clears the old weather before showing new data.
+Changing plugin locations clears the old weather before showing new data.
 
-Open-Meteo remains available as an explicit compatibility choice.
-Its location controls appear only when selected.
-The plugin preview does not automatically fall back to it.
+Upgrades remove the old Open-Meteo settings, saved coordinates, forecast cache, and request history.
+Existing plugin locations and corner settings are preserved.
 Use `python scripts/preview.py emery --plugins --output /tmp/crisp-plugins.png` to capture fixture corner readings.
